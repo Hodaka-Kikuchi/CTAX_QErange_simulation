@@ -863,7 +863,7 @@ else:
         height=650,
 
         xaxis=dict(
-            range=[0,np.max(Q_max)],
+            range=[0,3],
             showgrid=True,
             gridcolor="lightgray",
             zeroline=False,
@@ -874,6 +874,7 @@ else:
         ),
 
         yaxis=dict(
+            range=[-5,20],
             showgrid=True,
             gridcolor="lightgray",
             zeroline=False,
