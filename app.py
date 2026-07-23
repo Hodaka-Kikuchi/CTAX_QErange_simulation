@@ -292,7 +292,7 @@ if mode == "Single crystal":
 
         return np.array([qx,qy])
 
-    def calc_Q_region(hw, Ef, S2min):
+    def calc_Q_region(hw, Ef, Ef_S2, S2min):
 
         Ei = Ef + hw
 
