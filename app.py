@@ -251,11 +251,25 @@ if mode == "Single crystal":
 
         st.header("Configuration")
 
-        Ef = st.number_input(
+        Ef_input = st.sidebar.number_input(
             "Ef (meV)",
-            value=4.8,
-            step=0.1
+            value=5.0,
+            step=0.5
         )
+
+        high_harmonics = st.sidebar.checkbox(
+            "λ/2",
+            value=False
+        )
+
+        if high_harmonics:
+            Ef = 4 * Ef_input
+            Ef_S2 = Ef_input
+        else:
+            Ef = Ef_input
+            Ef_S2 = Ef_input
+
+        Ef_S2 = Ef_input
 
         S2min = st.number_input(
             "2θ minimum (deg)",
@@ -680,30 +694,17 @@ else:
 
         st.header("Configuration")
 
-        Ef_input = st.sidebar.number_input(
+        Ef = st.number_input(
             "Ef (meV)",
-            value=5.0,
-            step=0.5
+            value=4.8,
+            step=0.1
         )
-
-        high_harmonics = st.sidebar.checkbox(
-            "λ/2",
-            value=False
-        )
-
-        if high_harmonics:
-            Ef = 4 * Ef_input
-            Ef_S2 = Ef_input
-        else:
-            Ef = Ef_input
-            Ef_S2 = Ef_input
 
         S2min = st.number_input(
             "2θ minimum (deg)",
             value=8.0,
             step=0.1
         )
-        Ef_S2 = Ef_input
 
     #############################
 
