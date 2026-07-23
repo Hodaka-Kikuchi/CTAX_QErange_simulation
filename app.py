@@ -625,21 +625,21 @@ else:
         with col1:
             a = st.number_input(
                 "a",
-                value=4.82,
+                value=5,
                 step=0.01
             )
 
         with col2:
             b = st.number_input(
                 "b",
-                value=4.82,
+                value=5,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c",
-                value=23.38,
+                value=5,
                 step=0.01
             )
 
@@ -665,7 +665,7 @@ else:
         with col3:
             gamma = st.number_input(
                 "γ",
-                value=120.0,
+                value=90.0,
                 step=1.0
             )
 
