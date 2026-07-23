@@ -347,6 +347,7 @@ if mode == "Single crystal":
         result = calc_Q_region(
             hw,
             Ef,
+            Ef_S2,
             S2min
         )
         
@@ -702,6 +703,7 @@ else:
             value=8.0,
             step=0.1
         )
+        Ef_S2 = Ef_input
 
     #############################
 
