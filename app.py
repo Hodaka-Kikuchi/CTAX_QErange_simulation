@@ -333,7 +333,8 @@ if mode == "Single crystal":
             S2max
         )
 
-    hw_list=np.arange(3.6-Ef,20.1-Ef,0.2)
+    #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
+    hw_list=np.arange(0,20.1-Ef,0.2)
 
     regions=[]
     S2_list=[]
