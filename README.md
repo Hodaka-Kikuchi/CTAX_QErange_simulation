@@ -11,3 +11,6 @@ Interactive simulator for the accessible Q-E range of the CTAX triple-axis spect
 - Plotly-based interactive figures
 
 Developed by Hodaka Kikuchi
+
+link is as following
+https://ctaxqerangesimulation-pvm4jr7grf4clh2scs2g6f.streamlit.app/
