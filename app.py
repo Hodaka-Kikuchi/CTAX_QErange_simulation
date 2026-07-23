@@ -144,21 +144,21 @@ if mode == "Single crystal":
         with col1:
             a = st.number_input(
                 "a",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
         with col2:
             b = st.number_input(
                 "b",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
@@ -625,21 +625,21 @@ else:
         with col1:
             a = st.number_input(
                 "a",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
         with col2:
             b = st.number_input(
                 "b",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c",
-                value=5,
+                value=5.00,
                 step=0.01
             )
 
