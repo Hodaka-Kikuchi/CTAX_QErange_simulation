@@ -599,6 +599,10 @@ if mode == "Single crystal":
     Qplot = 1.2 * max(Qmax_list)
 
     fig.update_layout(
+
+        xaxis_title="Qx (Å⁻¹)",
+        yaxis_title="Qy (Å⁻¹)",
+        
         xaxis=dict(
             range=[-Qplot, Qplot],
             dtick=1,
@@ -838,7 +842,7 @@ else:
     )
 
     fig.update_layout(
-
+        
         title=dict(
             text=(
                 f"Ef={Ef:.1f} meV | "
