@@ -151,14 +151,14 @@ if mode == "Single crystal":
         with col2:
             b = st.number_input(
                 "b",
-                value=5.00,
+                value=6.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c",
-                value=5.00,
+                value=7.00,
                 step=0.01
             )
 
@@ -602,7 +602,7 @@ if mode == "Single crystal":
 
         xaxis_title="Qx (Å⁻¹)",
         yaxis_title="Qy (Å⁻¹)",
-        
+
         xaxis=dict(
             range=[-Qplot, Qplot],
             dtick=1,
@@ -652,14 +652,14 @@ else:
         with col2:
             b = st.number_input(
                 "b",
-                value=5.00,
+                value=6.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c",
-                value=5.00,
+                value=7.00,
                 step=0.01
             )
 
