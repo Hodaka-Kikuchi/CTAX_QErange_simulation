@@ -251,25 +251,11 @@ if mode == "Single crystal":
 
         st.header("Configuration")
 
-        Ef_input = st.sidebar.number_input(
+        Ef = st.number_input(
             "Ef (meV)",
-            value=5.0,
-            step=0.5
+            value=4.8,
+            step=0.1
         )
-
-        high_harmonics = st.sidebar.checkbox(
-            "λ/2",
-            value=False
-        )
-
-        if high_harmonics:
-            Ef = 4 * Ef_input
-            Ef_S2 = Ef_input
-        else:
-            Ef = Ef_input
-            Ef_S2 = Ef_input
-
-        Ef_S2 = Ef_input
 
         S2min = st.number_input(
             "2θ minimum (deg)",
@@ -294,28 +280,26 @@ if mode == "Single crystal":
     # calculation range
     #----------------------------------------
 
-    def Qvector(two_theta_deg, Ei, Ef_calc):
+    def Qvector(two_theta_deg, Ei):
 
         ki = 0.6947*np.sqrt(Ei)
-        kf = 0.6947*np.sqrt(Ef_calc)
+        kf = 0.6947*np.sqrt(Ef)
 
-        tt=np.deg2rad(two_theta_deg)
+        tt = np.deg2rad(two_theta_deg)
 
-        qx = ki-kf*np.cos(tt)
+        qx = ki - kf*np.cos(tt)
         qy = -kf*np.sin(tt)
 
         return np.array([qx,qy])
 
-    def calc_Q_region(hw, Ef, Ef_S2, S2min):
+    def calc_Q_region(hw, Ef, S2min):
 
         Ei = Ef + hw
 
-        Ei_S2 = Ef_S2 + hw
+        S2max = float(S2interp(Ei))
 
-        S2max = float(S2interp(Ei_S2))
-
-        qmin = Qvector(S2min, Ei, Ef)
-        qmax = Qvector(S2max, Ei, Ef)
+        qmin = Qvector(S2min, Ei)
+        qmax = Qvector(S2max, Ei)
 
         phi=np.linspace(0,360,721)
 
@@ -361,7 +345,6 @@ if mode == "Single crystal":
         result = calc_Q_region(
             hw,
             Ef,
-            Ef_S2,
             S2min
         )
         
@@ -562,15 +545,10 @@ if mode == "Single crystal":
 
         steps.append(step)
 
-    if high_harmonics:
-        Ef_text=f"Ef={Ef_input:.1f} meV (×4={Ef:.1f} meV)"
-    else:
-        Ef_text=f"Ef={Ef:.1f} meV"
-
     fig.update_layout(
         title=dict(
             text=(
-                f"CTAX Q-E Range ({Ef_text}) | "
+                f"Ef={Ef:.1f} meV | "
                 f"a={a:.3f}, b={b:.3f}, c={c:.3f} Å<br>"
                 f"α={alpha:.1f}, β={beta:.1f}, γ={gamma:.1f}° | "
                 f"Plane: ({U_h},{U_k},{U_l})-({V_h},{V_k},{V_l})"
