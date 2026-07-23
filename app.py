@@ -184,7 +184,7 @@ if mode == "Single crystal":
         with col3:
             gamma = st.number_input(
                 "γ",
-                value=90,
+                value=90.0,
                 step=1.0
             )
 
