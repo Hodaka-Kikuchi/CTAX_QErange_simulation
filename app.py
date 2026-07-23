@@ -251,11 +251,26 @@ if mode == "Single crystal":
 
         st.header("Configuration")
 
-        Ef = st.number_input(
-            "Ef (meV)",
-            value=4.8,
-            step=0.1
-        )
+        col1, col2 = st.sidebar.columns([2,1])
+        
+        with col1:
+            Ef_input = st.number_input(
+                "Ef (meV)",
+                value=5.0,
+                step=0.5
+            )
+
+        with col2:
+            lambda_half = st.checkbox(
+                "λ/2",
+                value=False
+            )
+
+        if lambda_half:
+            Ef = 4 * Ef_input
+            data[:,2] = 4 * data[:,2]
+        else:
+            Ef = Ef_input
 
         S2min = st.number_input(
             "2θ minimum (deg)",
