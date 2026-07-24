@@ -223,6 +223,7 @@ if mode == "Single crystal":
 
         with Vcol1:
             V_h = st.number_input(
+                "h",
                 value=0,
                 step=1,
                 key="V_h"
@@ -230,6 +231,7 @@ if mode == "Single crystal":
 
         with Vcol2:
             V_k = st.number_input(
+                "k",
                 value=1,
                 step=1,
                 key="V_k"
@@ -237,6 +239,7 @@ if mode == "Single crystal":
 
         with Vcol3:
             V_l = st.number_input(
+                "l",
                 value=0,
                 step=1,
                 key="V_l"
