@@ -207,6 +207,7 @@ if mode == "Single crystal":
                 "h",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_h"
             )
 
@@ -215,6 +216,7 @@ if mode == "Single crystal":
                 "k",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_k"
             )
 
@@ -223,6 +225,7 @@ if mode == "Single crystal":
                 "l",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_l"
             )
 
@@ -793,6 +796,7 @@ else:
                 "h",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_h"
             )
 
@@ -801,6 +805,7 @@ else:
                 "k",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_k"
             )
 
@@ -809,6 +814,7 @@ else:
                 "l",
                 value=0.00,
                 step=0.01,
+                format="%.3f",
                 key="k_l"
             )
 
