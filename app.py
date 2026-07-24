@@ -201,6 +201,7 @@ if mode == "Single crystal":
 
         with Ucol1:
             U_h = st.number_input(
+                "h",
                 value=1,
                 step=1,
                 key="U_h"
@@ -208,6 +209,7 @@ if mode == "Single crystal":
 
         with Ucol2:
             U_k = st.number_input(
+                "k",
                 value=0,
                 step=1,
                 key="U_k"
@@ -215,6 +217,7 @@ if mode == "Single crystal":
 
         with Ucol3:
             U_l = st.number_input(
+                "l",
                 value=0,
                 step=1,
                 key="U_l"
