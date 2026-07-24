@@ -197,10 +197,10 @@ if mode == "Single crystal":
         col1, col2, col3, col4 = st.sidebar.columns(4)
 
         with col1:
-            show_k = st.sidebar.checkbox(
-                    "show",
-                    value=False
-                )
+            show_k = st.checkbox(
+                "show",
+                value=False
+            )
             
         with col2:
             k_h = st.number_input(
