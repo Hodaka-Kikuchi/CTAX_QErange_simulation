@@ -617,7 +617,7 @@ if mode == "Single crystal":
             x=[None],
             y=[None],
             mode="markers",
-            name=f"S2 range = {S2min:.1f} - {S2max:.1f}°"
+            name=f"S2 range = {S2min:.1f} - {S2_list[0]:.1f}°"
         )
     )
 
