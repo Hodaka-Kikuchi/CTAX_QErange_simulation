@@ -195,8 +195,6 @@ if mode == "Single crystal":
 
         st.header("Scattering plane")
 
-        st.write("U vector")
-
         Ucol1, Ucol2, Ucol3, Ucol4 = st.columns(4)
 
         with Ucol1:
@@ -226,12 +224,12 @@ if mode == "Single crystal":
                 key="U_l"
             )
 
-
-        st.write("V vector")
-
-        Vcol1, Vcol2, Vcol3 = st.columns(3)
+        Vcol1, Vcol2, Vcol3, Vcol4 = st.columns(4)
 
         with Vcol1:
+            st.write("V vector")
+
+        with Vcol2:
             V_h = st.number_input(
                 "h",
                 value=0,
@@ -239,7 +237,7 @@ if mode == "Single crystal":
                 key="V_h"
             )
 
-        with Vcol2:
+        with Vcol3:
             V_k = st.number_input(
                 "k",
                 value=1,
@@ -247,7 +245,7 @@ if mode == "Single crystal":
                 key="V_k"
             )
 
-        with Vcol3:
+        with Vcol4:
             V_l = st.number_input(
                 "l",
                 value=0,
