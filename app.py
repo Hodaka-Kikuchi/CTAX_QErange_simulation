@@ -192,6 +192,43 @@ if mode == "Single crystal":
                 step=1.0
             )
 
+        st.sidebar.header("Magnetic Bragg peaks")
+
+        show_k = st.sidebar.checkbox(
+            "Propagation vector",
+            value=False
+        )
+
+        if show_k:
+            col1, col2, col3 = st.sidebar.columns(3)
+
+            with col1:
+                k_h = st.number_input(
+                    "h",
+                    value=0.0,
+                    step=0.1,
+                    key="k_h"
+                )
+
+            with col2:
+                k_k = st.number_input(
+                    "k",
+                    value=0.0,
+                    step=0.1,
+                    key="k_k"
+                )
+
+            with col3:
+                k_l = st.number_input(
+                    "l",
+                    value=0.0,
+                    step=0.1,
+                    key="k_l"
+                )
+
+        else:
+
+            k_h = k_k = k_l = 0.0
 
         st.header("Scattering plane")
 
@@ -418,7 +455,7 @@ if mode == "Single crystal":
 
     for p in phi:
         r=np.deg2rad(p)
-        Qmin = Qvector(5, Ei)
+        Qmin = Qvector(S2min, Ei)
         Qmax = Qvector(S2max, Ei)
         R=np.array([
             [np.cos(r),-np.sin(r)],
@@ -471,6 +508,10 @@ if mode == "Single crystal":
     labels = []
     Qplot = 2 * Qmax
 
+    mag_x = []
+    mag_y = []
+    mag_label = []
+
     for m in range(-Mmax, Mmax+1):
         for n in range(-Nmax, Nmax+1):
 
@@ -494,6 +535,38 @@ if mode == "Single crystal":
                 f"({int(hkl[0])},{int(hkl[1])},{int(hkl[2])})"
             )
 
+            if show_k:
+                        
+                kvec = np.array([k_h, k_k, k_l])
+
+                for sign in (+1, -1):
+
+                    hkl_mag = (
+                        m*np.array([U_h, U_k, U_l])
+                        + n*np.array([V_h, V_k, V_l])
+                        + sign*kvec
+                    )
+
+                    Gmag = (
+                        hkl_mag[0]*astar
+                        + hkl_mag[1]*bstar
+                        + hkl_mag[2]*cstar
+                    )
+
+                    if np.linalg.norm(Gmag) > Qplot:
+                        continue
+
+                    x = np.dot(Gmag, ex)
+                    y = np.dot(Gmag, ey)
+
+                    mag_x.append(x)
+                    mag_y.append(y)
+                    
+                    mag_label.append(
+                        f"({hkl_mag[0]:.2f},{hkl_mag[1]:.2f},{hkl_mag[2]:.2f})"
+                    )
+                    
+
     fig.add_trace(
         go.Scatter(
             x=np.concatenate([xmax,xmin[::-1]]),
@@ -512,7 +585,7 @@ if mode == "Single crystal":
             mode="markers+text",
             text=labels,
             textposition="top center",
-            name="Reciprocal lattice",
+            name="Nuclear Bragg peaks",
             marker=dict(
                 color="black",
                 size=6
@@ -521,6 +594,21 @@ if mode == "Single crystal":
                 color="black",
                 size=12
             )
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=mag_x,
+            y=mag_y,
+            mode="markers",
+            marker=dict(
+                color="red",
+                size=8
+            ),
+            #hovertext=mag_label,
+            #hovertemplate="%{hovertext}<extra></extra>",
+            name="Magnetic Bragg peaks"
         )
     )
 
@@ -546,16 +634,19 @@ if mode == "Single crystal":
                     "x":[
                         np.concatenate([xmax,xmin[::-1]]),
                         Gx_points,
+                        mag_x,
                         [None]
                     ],
                     "y":[
                         np.concatenate([ymax,ymin[::-1]]),
                         Gy_points,
+                        mag_y,
                         [None]
                     ],
                     "name":[
                         "Accessible Q",
-                        "Reciprocal lattice",
+                        "Nuclear Bragg peaks",
+                        "Magnetic Bragg peaks",
                         f"S2 range = {S2min:.1f} - {S2_list[i]:.1f}°"
                     ]
                 }
@@ -643,56 +734,91 @@ else:
 
     with st.sidebar:
 
-        st.header("Lattice constant (Å)")
+        st.header("Lattice constant")
 
         col1, col2, col3 = st.columns(3)
 
         with col1:
             a = st.number_input(
-                "a",
+                "a (Å)",
                 value=5.00,
                 step=0.01
             )
 
         with col2:
             b = st.number_input(
-                "b",
+                "b (Å)",
                 value=6.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
-                "c",
+                "c (Å)",
                 value=7.00,
                 step=0.01
             )
-
-
-        st.write("Lattice angle (deg)")
 
         col1, col2, col3 = st.columns(3)
 
         with col1:
             alpha = st.number_input(
-                "α",
+                "α (deg)",
                 value=90.0,
                 step=1.0
             )
 
         with col2:
             beta = st.number_input(
-                "β",
+                "β (deg)",
                 value=90.0,
                 step=1.0
             )
 
         with col3:
             gamma = st.number_input(
-                "γ",
+                "γ (deg)",
                 value=90.0,
                 step=1.0
             )
+
+        st.sidebar.header("Magnetic Bragg peaks")
+        
+        show_k = st.sidebar.checkbox(
+            "Propagation vector",
+            value=False
+        )
+
+        if show_k:
+            col1, col2, col3 = st.sidebar.columns(3)
+
+            with col1:
+                k_h = st.number_input(
+                    "h",
+                    value=0.0,
+                    step=0.1,
+                    key="k_h"
+                )
+
+            with col2:
+                k_k = st.number_input(
+                    "k",
+                    value=0.0,
+                    step=0.1,
+                    key="k_k"
+                )
+
+            with col3:
+                k_l = st.number_input(
+                    "l",
+                    value=0.0,
+                    step=0.1,
+                    key="k_l"
+                )
+
+        else:
+
+            k_h = k_k = k_l = 0.0
 
         st.header("Configuration")
 
@@ -784,7 +910,8 @@ else:
             y=max(hw),
             text=f"{n}a*",
             showarrow=False,
-            yshift=10,
+            xshift=15,
+            yshift=30,
             font=dict(color="red")
         )
 
@@ -807,7 +934,8 @@ else:
             y=max(hw),
             text=f"{n}b*",
             showarrow=False,
-            yshift=10,
+            xshift=15,
+            yshift=30,
             font=dict(color="blue")
         )
 
@@ -830,9 +958,81 @@ else:
             y=max(hw),
             text=f"{n}c*",
             showarrow=False,
-            yshift=10,
+            xshift=15,
+            yshift=30,
             font=dict(color="green")
         )
+
+    if show_k:
+
+        kvec = np.array([
+            k_h,
+            k_k,
+            k_l
+        ])
+
+        mag_Q = []
+
+        # Q範囲
+        Qlimit = 3.0
+
+        # h,k,l の探索範囲
+        hmax = 10
+        kmax = 10
+        lmax = 10
+
+        for h in range(-hmax, hmax+1):
+            for k in range(-kmax, kmax+1):
+                for l in range(-lmax, lmax+1):
+
+                    G = (
+                        h*astar +
+                        k*bstar +
+                        l*cstar
+                    )
+
+                    # +k と -k
+                    for sign in (+1, -1):
+
+                        Qmag = G + sign * (
+                            kvec[0]*astar +
+                            kvec[1]*bstar +
+                            kvec[2]*cstar
+                        )
+
+                        q = np.linalg.norm(Qmag)
+
+                        if q < 1e-6:
+                            continue
+
+                        if q <= Qlimit:
+                            mag_Q.append(q)
+
+
+        # 重複除去
+        mag_Q = sorted(list(set(np.round(mag_Q,6))))
+
+
+        for q in mag_Q:
+
+            fig.add_vline(
+                x=q,
+                line_dash="dot",
+                line_color="black",
+                opacity=0.6
+            )
+
+            fig.add_annotation(
+                x=q,
+                y=max(hw),
+                text="k*",
+                showarrow=False,
+                xshift=15,
+                yshift=15,
+                font=dict(
+                    color="black"
+                )
+            )
 
     # Accessible region
     fig.add_trace(
