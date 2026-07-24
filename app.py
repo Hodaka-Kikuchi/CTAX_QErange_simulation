@@ -137,7 +137,7 @@ if mode == "Single crystal":
 
     with st.sidebar:
 
-        st.header("Lattice constant (Å)")
+        st.header("Lattice constant (Å and deg)")
 
         col1, col2, col3 = st.columns(3)
 
@@ -163,7 +163,7 @@ if mode == "Single crystal":
             )
 
 
-        st.write("Lattice angle (deg)")
+        #st.write("Lattice angle (deg)")
 
         col1, col2, col3 = st.columns(3)
 
@@ -197,7 +197,6 @@ if mode == "Single crystal":
 
         with Ucol1:
             U_h = st.number_input(
-                "h",
                 value=1,
                 step=1,
                 key="U_h"
@@ -205,7 +204,6 @@ if mode == "Single crystal":
 
         with Ucol2:
             U_k = st.number_input(
-                "k",
                 value=0,
                 step=1,
                 key="U_k"
@@ -213,7 +211,6 @@ if mode == "Single crystal":
 
         with Ucol3:
             U_l = st.number_input(
-                "l",
                 value=0,
                 step=1,
                 key="U_l"
@@ -226,7 +223,6 @@ if mode == "Single crystal":
 
         with Vcol1:
             V_h = st.number_input(
-                "h",
                 value=0,
                 step=1,
                 key="V_h"
@@ -234,7 +230,6 @@ if mode == "Single crystal":
 
         with Vcol2:
             V_k = st.number_input(
-                "k",
                 value=1,
                 step=1,
                 key="V_k"
@@ -242,7 +237,6 @@ if mode == "Single crystal":
 
         with Vcol3:
             V_l = st.number_input(
-                "l",
                 value=0,
                 step=1,
                 key="V_l"
@@ -273,7 +267,7 @@ if mode == "Single crystal":
             Ef = Ef_input
 
         S2min = st.number_input(
-            "2θ minimum (deg)",
+            "minimum 2θ (deg)",
             value=8.0,
             step=0.1
         )
