@@ -256,7 +256,7 @@ if mode == "Single crystal":
         with col1:
             Ef_input = st.number_input(
                 "Ef (meV)",
-                value=5.0,
+                value=4.8,
                 step=0.5
             )
 
