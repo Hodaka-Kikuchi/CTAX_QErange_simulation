@@ -603,7 +603,7 @@ if mode == "Single crystal":
             mode="markers",
             marker=dict(
                 color="red",
-                size=8
+                size=6
             ),
             #hovertext=mag_label,
             #hovertemplate="%{hovertext}<extra></extra>",
