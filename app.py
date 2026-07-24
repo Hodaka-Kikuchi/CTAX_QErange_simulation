@@ -141,27 +141,27 @@ if mode == "Single crystal":
 
     with st.sidebar:
 
-        st.header("Lattice constant (Å and deg)")
+        st.header("Lattice constant")
 
         col1, col2, col3 = st.columns(3)
 
         with col1:
             a = st.number_input(
-                "a",
+                "a (Å)",
                 value=5.00,
                 step=0.01
             )
 
         with col2:
             b = st.number_input(
-                "b",
+                "b (Å)",
                 value=6.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
-                "c",
+                "c (Å)",
                 value=7.00,
                 step=0.01
             )
@@ -173,21 +173,21 @@ if mode == "Single crystal":
 
         with col1:
             alpha = st.number_input(
-                "α",
+                "α (deg)",
                 value=90.0,
                 step=1.0
             )
 
         with col2:
             beta = st.number_input(
-                "β",
+                "β (deg)",
                 value=90.0,
                 step=1.0
             )
 
         with col3:
             gamma = st.number_input(
-                "γ",
+                "γ (deg)",
                 value=90.0,
                 step=1.0
             )
