@@ -197,9 +197,12 @@ if mode == "Single crystal":
 
         st.write("U vector")
 
-        Ucol1, Ucol2, Ucol3 = st.columns(3)
+        Ucol1, Ucol2, Ucol3, Ucol4 = st.columns(4)
 
         with Ucol1:
+            st.write("U vector")
+
+        with Ucol2:
             U_h = st.number_input(
                 "h",
                 value=1,
@@ -207,7 +210,7 @@ if mode == "Single crystal":
                 key="U_h"
             )
 
-        with Ucol2:
+        with Ucol3:
             U_k = st.number_input(
                 "k",
                 value=0,
@@ -215,7 +218,7 @@ if mode == "Single crystal":
                 key="U_k"
             )
 
-        with Ucol3:
+        with Ucol4:
             U_l = st.number_input(
                 "l",
                 value=0,
