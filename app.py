@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import plotly.graph_objects as go
 
+# デバックの手順
+# cd C:\Users\h34\Documents\Python\CTAX
+# python -m streamlit run app.py
+
 # QErange_single_crystal2.pyのweb版
 
 # global data
