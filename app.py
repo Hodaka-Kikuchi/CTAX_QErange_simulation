@@ -205,24 +205,24 @@ if mode == "Single crystal":
         with col2:
             k_h = st.number_input(
                 "h",
-                value=0.0,
-                step=0.1,
+                value=0.00,
+                step=0.01,
                 key="k_h"
             )
 
         with col3:
             k_k = st.number_input(
                 "k",
-                value=0.0,
-                step=0.1,
+                value=0.00,
+                step=0.01,
                 key="k_k"
             )
 
         with col4:
             k_l = st.number_input(
                 "l",
-                value=0.0,
-                step=0.1,
+                value=0.00,
+                step=0.01,
                 key="k_l"
             )
 
@@ -778,43 +778,39 @@ else:
                 step=1.0
             )
 
-        st.sidebar.header("Magnetic Bragg peaks")
+        st.sidebar.header("Propagation vector")
         
-        show_k = st.sidebar.checkbox(
-            "Propagation vector",
-            value=False
-        )
+        col1, col2, col3, col4 = st.sidebar.columns(4)
 
-        if show_k:
-            col1, col2, col3 = st.sidebar.columns(3)
+        with col1:
+            show_k = st.checkbox(
+                "show",
+                value=False
+            )
+            
+        with col2:
+            k_h = st.number_input(
+                "h",
+                value=0.00,
+                step=0.01,
+                key="k_h"
+            )
 
-            with col1:
-                k_h = st.number_input(
-                    "h",
-                    value=0.0,
-                    step=0.1,
-                    key="k_h"
-                )
+        with col3:
+            k_k = st.number_input(
+                "k",
+                value=0.00,
+                step=0.01,
+                key="k_k"
+            )
 
-            with col2:
-                k_k = st.number_input(
-                    "k",
-                    value=0.0,
-                    step=0.1,
-                    key="k_k"
-                )
-
-            with col3:
-                k_l = st.number_input(
-                    "l",
-                    value=0.0,
-                    step=0.1,
-                    key="k_l"
-                )
-
-        else:
-
-            k_h = k_k = k_l = 0.0
+        with col4:
+            k_l = st.number_input(
+                "l",
+                value=0.00,
+                step=0.01,
+                key="k_l"
+            )
 
         st.header("Configuration")
 
