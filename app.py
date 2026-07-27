@@ -757,13 +757,21 @@ if mode == "Single crystal":
 
         steps.append(step)
 
+    if mode == "Ef fixed":
+        energy_text = f"Ef={Ef:.2f} meV"
+    else:
+        energy_text = f"Ei={Ei:.2f} meV"
+
+    lambda_text = " | λ/2" if lambda_half else ""
+
     fig.update_layout(
+        
         title=dict(
             text=(
-                f"Ef={Ef:.1f} meV | "
+                f"{instrument_data['name']} | "
+                f"{energy_text}{lambda_text}<br>"
                 f"a={a:.3f}, b={b:.3f}, c={c:.3f} Å<br>"
-                f"α={alpha:.1f}, β={beta:.1f}, γ={gamma:.1f}° | "
-                f"Plane: ({U_h},{U_k},{U_l})-({V_h},{V_k},{V_l})"
+                f"α={alpha:.1f}, β={beta:.1f}, γ={gamma:.1f}°"
             ),
             x=0.5,
             xanchor="center",
@@ -1259,14 +1267,26 @@ else:
         )
     )
 
+    if mode == "Ef fixed":
+        energy_text = f"Ef={Ef:.2f} meV"
+    else:
+        energy_text = f"Ei={Ei:.2f} meV"
+
     fig.update_layout(
         
         title=dict(
             text=(
-                f"Ef={Ef:.1f} meV | "
+                f"{instrument_data['name']} | "
+                f"{energy_text}<br>"
                 f"a={a:.3f}, b={b:.3f}, c={c:.3f} Å<br>"
                 f"α={alpha:.1f}, β={beta:.1f}, γ={gamma:.1f}°"
             ),
+            x=0.5,
+            xanchor="center",
+            y=0.98,
+            yanchor="top",
+            font=dict(size=14)
+        ),
             x=0.5,
             xanchor="center",
             y=0.98,
