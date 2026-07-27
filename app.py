@@ -148,7 +148,7 @@ data = np.array(
     ]
 )
 
-idx = np.argsort(data[:,1])
+idx = np.argsort(data_work[:,1])
 
 S2interp = interp1d(
     data[idx,1],      # Ei
@@ -369,7 +369,9 @@ if mode == "Single crystal":
                 Ef = 4 * energy_input
 
                 # 元データを直接変更しない方が安全
-                #data[:,1] = 4 * data[:,1]
+                #data_work[:,1] = 4 * data_work[:,1]
+                data_work = data.copy()
+                data_work[:,1] *= 4
 
             else:
                 Ef = energy_input
@@ -380,7 +382,9 @@ if mode == "Single crystal":
             if lambda_half:
                 Ei = 4 * energy_input
 
-                #data[:,1] = 4 * data[:,1]
+                #data_work[:,1] = 4 * data_work[:,1]
+                data_work = data.copy()
+                data_work[:,1] *= 4
 
             else:
                 Ei = energy_input
@@ -450,7 +454,7 @@ if mode == "Single crystal":
 
     #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
     if mode=='Ef fixed':
-        hw_list=np.arange(0,np.max(data[:,1])-Ef,0.2)
+        hw_list=np.arange(0,np.max(data_work[:,1])-Ef,0.2)
     else:
         hw_list=np.arange(0,Ei,0.2)
 
@@ -954,7 +958,7 @@ else:
         # Ei rangeを連続化
         Ei_list = np.arange(
             Ef + 0.01,
-            np.max(data[:,1]),
+            np.max(data_work[:,1]),
             0.2
         )
 
