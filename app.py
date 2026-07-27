@@ -148,6 +148,7 @@ data = np.array(
     ]
 )
 
+data_work = data.copy()
 idx = np.argsort(data_work[:,1])
 
 S2interp = interp1d(
@@ -383,7 +384,6 @@ if mode == "Single crystal":
                 Ei = 4 * energy_input
 
                 #data_work[:,1] = 4 * data_work[:,1]
-                data_work = data.copy()
                 data_work[:,1] *= 4
 
             else:
