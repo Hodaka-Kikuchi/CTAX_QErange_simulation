@@ -459,20 +459,29 @@ if mode == "Single crystal":
         )
 
     #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
-    if mode=='Ef fixed':
+    if lambda_half:
 
-        Ei_max = np.max(data[:,1])
+        hw_list = np.array([0.0])
 
-        if lambda_half:
-            Ei_max *= 4
-
-        hw_list=np.arange(
-            0,
-            Ei_max-Ef,
-            0.2
-        )
     else:
-        hw_list=np.arange(0,Ei,0.2)
+
+        if mode=='Ef fixed':
+
+            Ei_max = np.max(data[:,1])
+
+            hw_list=np.arange(
+                0,
+                Ei_max-Ef,
+                0.2
+            )
+
+        else:
+
+            hw_list=np.arange(
+                0,
+                Ei,
+                0.2
+            )
 
     regions=[]
     S2_list=[]
