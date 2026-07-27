@@ -369,7 +369,7 @@ if mode == "Single crystal":
                 Ef = 4 * energy_input
 
                 # 元データを直接変更しない方が安全
-                data[:,2] = 4 * data[:,2]
+                data[:,1] = 4 * data[:,1]
 
             else:
                 Ef = energy_input
@@ -380,7 +380,7 @@ if mode == "Single crystal":
             if lambda_half:
                 Ei = 4 * energy_input
 
-                data[:,2] = 4 * data[:,2]
+                data[:,1] = 4 * data[:,1]
 
             else:
                 Ei = energy_input
