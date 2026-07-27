@@ -150,12 +150,23 @@ data = np.array(
 
 idx = np.argsort(data[:,1])
 
-S2interp = interp1d(
-    data[idx,1],      # Ei
-    data[idx,0],      # S2 limit
-    kind="linear",
-    fill_value="extrapolate"
-)
+if len(data) == 1:
+
+    S2_fixed = data[0,0]
+
+    def S2interp(Ei):
+        return S2_fixed
+
+else:
+
+    idx = np.argsort(data[:,1])
+
+    S2interp = interp1d(
+        data[idx,1],
+        data[idx,0],
+        kind="linear",
+        fill_value="extrapolate"
+    )
 
 # λ/2用
 idx_half = np.argsort(data[:,1]*4)
@@ -335,7 +346,7 @@ if mode == "Single crystal":
         )
 
         default_S2min = instrument_data.get(
-            "default_S2min",
+            "S2_min",
             8.0
         )
 
@@ -1093,7 +1104,7 @@ else:
 
     fig = go.Figure()
 
-    for n in range(1,10):
+    for n in range(1,20):
 
         q=n*astar_len
 
@@ -1117,7 +1128,7 @@ else:
             font=dict(color="red")
         )
 
-    for n in range(1,10):
+    for n in range(1,20):
 
         q=n*bstar_len
 
@@ -1141,7 +1152,7 @@ else:
             font=dict(color="blue")
         )
 
-    for n in range(1,10):
+    for n in range(1,20):
 
         q=n*cstar_len
 
@@ -1179,9 +1190,9 @@ else:
         Qlimit = np.max(Q_max)
 
         # h,k,l の探索範囲
-        hmax = 10
-        kmax = 10
-        lmax = 10
+        hmax = 20
+        kmax = 20
+        lmax = 20
 
         for h in range(-hmax, hmax+1):
             for k in range(-kmax, kmax+1):
