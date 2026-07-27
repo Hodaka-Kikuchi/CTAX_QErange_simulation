@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import plotly.graph_objects as go
+import json
+import os
 
 # デバックの手順
 # cd C:\Users\h34\Documents\Python\CTAX
@@ -16,76 +18,6 @@ import plotly.graph_objects as go
 # CTAX table
 # [M2, S2limit, Ei]
 # ==============================
-
-data = np.array([
-[-35.01,27,20.08],
-[-36.03,30,19.00],
-[-36.53,32,18.50],
-[-37,32,18.05],
-[-37.05,33,18.00],
-[-37.6,34,17.50],
-[-38.17,35,17.00],
-[-38.76,36,16.50],
-[-39,36,16.31],
-[-39.39,38,16.00],
-[-40.04,39,15.50],
-[-40,38,15.53],
-[-41.01,41,14.81],
-[-41.46,42,14.50],
-[-42.23,44,14.00],
-[-43,45,13.53],
-[-43.05,46,13.50],
-[-43.91,47,13.00],
-[-44.82,49,12.50],
-[-45,50,12.41],
-[-45.8,52,12.00],
-[-46.84,54,11.50],
-[-47,54,11.43],
-[-47.96,56,11.00],
-[-48.43,57,10.80],
-[-48.92,58,10.60],
-[-48.99,58,10.57],
-[-49.41,59,10.40],
-[-49.93,60,10.20],
-[-50.01,60,10.17],
-[-50.46,62,10.00],
-[-51.01,63,9.80],
-[-51.58,64,9.60],
-[-52.16,65,9.40],
-[-52.77,67,9.20],
-[-52.99,68,9.13],
-[-53.4,69,9.00],
-[-54.05,72,8.80],
-[-54.73,73,8.60],
-[-55.01,75,8.52],
-[-55.43,79,8.40],
-[-56.16,82,8.20],
-[-56.92,87,8.00],
-[-57,89,7.98],
-[-57.72,89,7.80],
-[-58.54,90,7.60],
-[-59.02,90,7.49],
-[-59.41,90,7.40],
-[-60,90,7.27],
-[-60.31,94,7.20],
-[-61.02,96,7.05],
-[-61.26,97,7.00],
-[-62.25,98,6.80],
-[-62.98,99,6.66],
-[-63.3,99,6.60],
-[-64.39,102,6.40],
-[-64.97,102,6.30],
-[-65.55,106,6.20],
-[-66.78,109,6.00],
-[-67.03,109,5.96],
-[-68.75,111,5.70],
-[-68.96,112,5.67],
-[-70.02,112,5.52],
-[-75.03,112,4.90],
-[-84.36,112,4.03],
-[-89.28,112,3.68],
-[-89.28,112,3.00]
-])
 
 # common function
 def reciprocal_vectors(a,b,c,alpha,beta,gamma):
@@ -118,23 +50,111 @@ def reciprocal_vectors(a,b,c,alpha,beta,gamma):
 
     return astar,bstar,cstar
 
+#----------------------------------------
+# file
+#----------------------------------------
+
+# Instrument folder
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+INSTRUMENT_DIR = os.path.join(
+    BASE_DIR,
+    "instruments"
+)
+
+instrument_files = sorted(
+    [
+        f.replace(".json","")
+        for f in os.listdir(INSTRUMENT_DIR)
+        if f.endswith(".json")
+    ]
+)
+
 # ==============================
 # UI
 # ==============================
+
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebar"] {
+            min-width: 350px;
+            max-width: 350px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 st.set_page_config(
     page_title="CTAX QErange simulator",
     layout="wide"
 )
 
-st.title("CTAX QErange Simulator")
+st.title("TAS Q-E Range Simulator")
 
-mode = st.sidebar.selectbox(
-    "Measurement type",
+display_names = {
+    "CTAX": "CTAX@HFIR",
+    "HB1": "HB-1@HFIR",
+    "HODACA": "HODACA@JRR-3"
+}
+
+with st.sidebar:
+
+    col1, col2 = st.columns([1,1])
+
+    with col1:
+
+        instrument = st.selectbox(
+            "Instrument",
+            instrument_files,
+            format_func=lambda x: display_names.get(x, x)
+        )
+
+    with col2:
+
+        mode = st.radio(
+            "Type",
+            [
+                "Single crystal",
+                "Powder"
+            ],
+            horizontal=True
+        )
+
+#----------------------------------------
+# interpolate S2 limit
+#----------------------------------------
+
+with open(
+    os.path.join(
+        INSTRUMENT_DIR,
+        f"{instrument}.json"
+    ),
+    "r"
+) as f:
+    instrument_data = json.load(f)
+
+
+data = np.array(
     [
-        "Single crystal",
-        "Powder"
+        [
+            x["S2limit"],
+            x["Ei"]
+        ]
+        for x in instrument_data["configuration"]
     ]
+)
+
+idx = np.argsort(data[:,1])
+
+S2interp = interp1d(
+    data[idx,1],      # Ei
+    data[idx,0],      # S2 limit
+    kind="linear",
+    fill_value="extrapolate"
 )
 
 if mode == "Single crystal":
@@ -289,48 +309,90 @@ if mode == "Single crystal":
                 key="V_l"
             )
 
+        #st.write(instrument)
+        #st.write(instrument_data)
 
         st.header("Configuration")
 
-        col1, col2 = st.sidebar.columns([2,1])
-        
-        with col1:
-            Ef_input = st.number_input(
-                "Ef (meV)",
-                value=4.8,
-                step=0.5
+        default_mode = instrument_data.get(
+            "energy_mode",
+            "Ef fixed"
+        )
+
+        default_energy = instrument_data.get(
+            "default_energy",
+            4.8
+        )
+
+        default_S2min = instrument_data.get(
+            "default_S2min",
+            8.0
+        )
+
+
+        col0, col1, col2 = st.sidebar.columns([2, 2, 1])
+
+
+        with col0:
+            mode = st.radio(
+                "",
+                ["Ef fixed", "Ei fixed"],
+                index=[
+                    "Ef fixed",
+                    "Ei fixed"
+                ].index(default_mode),
+                label_visibility="collapsed",
+                key=f"energy_mode_{instrument}"
             )
+
+
+        with col1:
+            energy_input = st.number_input(
+                f"{'Ef' if mode=='Ef fixed' else 'Ei'} (meV)",
+                value=float(default_energy),
+                step=0.5,
+                key=f"energy_{instrument}"
+            )
+
 
         with col2:
             lambda_half = st.checkbox(
                 "λ/2",
-                value=False
+                value=False,
+                key=f"lambda_{instrument}"
             )
 
-        if lambda_half:
-            Ef = 4 * Ef_input
-            data[:,2] = 4 * data[:,2]
+
+        if mode == "Ef fixed":
+
+            if lambda_half:
+                Ef = 4 * energy_input
+
+                # 元データを直接変更しない方が安全
+                data[:,2] = 4 * data[:,2]
+
+            else:
+                Ef = energy_input
+
+
         else:
-            Ef = Ef_input
+
+            if lambda_half:
+                Ei = 4 * energy_input
+
+                data[:,2] = 4 * data[:,2]
+
+            else:
+                Ei = energy_input
+
+
 
         S2min = st.number_input(
             "minimum 2θ (deg)",
-            value=8.0,
-            step=0.1
+            value=float(default_S2min),
+            step=0.1,
+            key=f"S2min_{instrument}"
         )
-
-    #----------------------------------------
-    # interpolate S2 limit
-    #----------------------------------------
-
-    idx = np.argsort(data[:,2])
-
-    S2interp = interp1d(
-        data[idx,2],      # Ei
-        data[idx,1],      # S2 limit
-        kind="linear",
-        fill_value="extrapolate"
-    )
 
     #----------------------------------------
     # calculation range
@@ -348,9 +410,7 @@ if mode == "Single crystal":
 
         return np.array([qx,qy])
 
-    def calc_Q_region(hw, Ef, S2min):
-
-        Ei = Ef + hw
+    def calc_Q_region(Ei, Ef, hw, S2min):
 
         S2max = float(S2interp(Ei))
 
@@ -390,17 +450,25 @@ if mode == "Single crystal":
         )
 
     #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
-    hw_list=np.arange(0,20.1-Ef,0.2)
+    if mode=='Ef fixed':
+        hw_list=np.arange(0,np.max(data[:,1])-Ef,0.2)
+    else:
+        hw_list=np.arange(0,Ei,0.2)
 
     regions=[]
     S2_list=[]
     Qmax_list=[]
 
     for hw in hw_list:
-        Ei = Ef + hw
+        if mode=='Ef fixed':
+            Ei = Ef + hw
+        else:
+            Ef = Ei - hw
+
         result = calc_Q_region(
-            hw,
+            Ei,
             Ef,
+            hw,
             S2min
         )
         
@@ -820,16 +888,47 @@ else:
 
         st.header("Configuration")
 
-        Ef = st.number_input(
-            "Ef (meV)",
-            value=4.8,
-            step=0.1
+        default_mode = instrument_data.get(
+            "energy_mode",
+            "Ef fixed"
         )
 
+        default_energy = instrument_data.get(
+            "default_energy",
+            4.8
+        )
+
+        default_S2min = instrument_data.get(
+            "default_S2min",
+            8.0
+        )
+
+        col0, col1 = st.columns([2,2])
+
+        with col0:
+
+            mode = st.radio(
+                "",
+                ["Ef fixed","Ei fixed"],
+                index=["Ef fixed","Ei fixed"].index(default_mode),
+                label_visibility="collapsed",
+                key=f"powder_mode_{instrument}"
+            )
+
+        with col1:
+
+            energy_input = st.number_input(
+                f"{'Ef' if mode=='Ef fixed' else 'Ei'} (meV)",
+                value=float(default_energy),
+                step=0.1,
+                key=f"powder_energy_{instrument}"
+            )
+
         S2min = st.number_input(
-            "2θ minimum (deg)",
-            value=8.0,
-            step=0.1
+            "minimum 2θ (deg)",
+            value=float(default_S2min),
+            step=0.1,
+            key=f"powder_S2min_{instrument}"
         )
 
     #############################
@@ -844,43 +943,108 @@ else:
     cstar_len = np.linalg.norm(cstar)
 
     conv = 0.6947
-    kf = conv * np.sqrt(Ef)
 
     Q_min = []
     Q_max = []
     hw = []
 
-    for M2, S2limit, Ei in data:
+    if mode == "Ef fixed":
 
-        ki = conv * np.sqrt(Ei)
+        Ef = energy_input
 
-        # energy transfer
-        w = Ei - Ef
-
-        # scattering angle
-        theta_min = np.deg2rad(S2min)
-        theta_max = np.deg2rad(S2limit)
-
-        # Q minimum
-        qmin = np.sqrt(
-            ki**2 + kf**2
-            - 2*ki*kf*np.cos(theta_min)
+        # Ei rangeを連続化
+        Ei_list = np.arange(
+            Ef + 0.01,
+            np.max(data[:,1]),
+            0.2
         )
 
-        # Q maximum
-        qmax = np.sqrt(
-            ki**2 + kf**2
-            - 2*ki*kf*np.cos(theta_max)
+        for Ei in Ei_list:
+
+            # S2limitを補間
+            S2limit = float(
+                S2interp(Ei)
+            )
+
+            ki = conv * np.sqrt(Ei)
+            kf = conv * np.sqrt(Ef)
+
+            # energy transfer
+            w = Ei - Ef
+
+            # scattering angle
+            theta_min = np.deg2rad(S2min)
+            theta_max = np.deg2rad(S2limit)
+
+            # Q minimum
+            qmin = np.sqrt(
+                ki**2 + kf**2
+                - 2*ki*kf*np.cos(theta_min)
+            )
+
+            # Q maximum
+            qmax = np.sqrt(
+                ki**2 + kf**2
+                - 2*ki*kf*np.cos(theta_max)
+            )
+
+            Q_min.append(qmin)
+            Q_max.append(qmax)
+            hw.append(w)
+
+    else:
+
+        # Ei fixed:
+        # Eiを固定してhwをscan
+        Ei = energy_input
+
+        # S2 limitはEiから決定
+        S2limit = float(S2interp(Ei))
+
+        hw_list = np.arange(
+            0,
+            Ei-0.01,
+            0.2
         )
 
-        Q_min.append(qmin)
-        Q_max.append(qmax)
-        hw.append(w)
+
+        for w in hw_list:
+
+            Ef = Ei - w
+
+            if Ef <= 0:
+                continue
+
+            ki = conv * np.sqrt(Ei)
+            kf = conv * np.sqrt(Ef)
+
+            theta_min = np.deg2rad(S2min)
+            theta_max = np.deg2rad(S2limit)
+
+            # Q minimum
+            qmin = np.sqrt(
+                ki**2 + kf**2
+                - 2*ki*kf*np.cos(theta_min)
+            )
+
+            # Q maximum
+            qmax = np.sqrt(
+                ki**2 + kf**2
+                - 2*ki*kf*np.cos(theta_max)
+            )
+
+            Q_min.append(qmin)
+            Q_max.append(qmax)
+            hw.append(w)
+
+
 
     Q_min = np.array(Q_min)
     Q_max = np.array(Q_max)
     hw = np.array(hw)
 
+
+    # energy transfer順に並べ替え
     idx = np.argsort(hw)
 
     hw = hw[idx]
@@ -893,7 +1057,7 @@ else:
 
         q=n*astar_len
 
-        if q>3:
+        if q>np.max(Q_max):
             break
 
         fig.add_vline(
@@ -917,7 +1081,7 @@ else:
 
         q=n*bstar_len
 
-        if q>3:
+        if q>np.max(Q_max):
             break
 
         fig.add_vline(
@@ -941,7 +1105,7 @@ else:
 
         q=n*cstar_len
 
-        if q>3:
+        if q>np.max(Q_max):
             break
 
         fig.add_vline(
@@ -972,7 +1136,7 @@ else:
         mag_Q = []
 
         # Q範囲
-        Qlimit = 3.0
+        Qlimit = np.max(Q_max)
 
         # h,k,l の探索範囲
         hmax = 10
@@ -1010,7 +1174,6 @@ else:
         # 重複除去
         mag_Q = sorted(list(set(np.round(mag_Q,6))))
 
-
         for q in mag_Q:
 
             fig.add_vline(
@@ -1031,6 +1194,26 @@ else:
                     color="black"
                 )
             )
+
+    # ==============================
+    # Auto axis range
+    # ==============================
+
+    Qmax_plot = np.max(Q_max)
+
+    Q_margin = 0.1 * Qmax_plot
+
+    xmin = 0
+    xmax = Qmax_plot + Q_margin
+
+
+    hw_min = np.min(hw)
+    hw_max = np.max(hw)
+
+    hw_margin = 0.1 * (hw_max - hw_min)
+
+    ymin = hw_min - hw_margin
+    ymax = hw_max + hw_margin
 
     # Accessible region
     fig.add_trace(
@@ -1066,7 +1249,7 @@ else:
         height=650,
 
         xaxis=dict(
-            range=[0,3],
+            range=[0, xmax],
             showgrid=True,
             gridcolor="lightgray",
             zeroline=False,
@@ -1077,7 +1260,7 @@ else:
         ),
 
         yaxis=dict(
-            range=[-5,20],
+            range=[0, ymax],
             showgrid=True,
             gridcolor="lightgray",
             zeroline=False,
