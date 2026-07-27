@@ -148,12 +148,21 @@ data = np.array(
     ]
 )
 
-data_work = data.copy()
-idx = np.argsort(data_work[:,1])
+idx = np.argsort(data[:,1])
 
 S2interp = interp1d(
     data[idx,1],      # Ei
     data[idx,0],      # S2 limit
+    kind="linear",
+    fill_value="extrapolate"
+)
+
+# λ/2用
+idx_half = np.argsort(data[:,1]*4)
+
+S2interp_half = interp1d(
+    data[idx_half,1]*4,
+    data[idx_half,0],
     kind="linear",
     fill_value="extrapolate"
 )
@@ -370,9 +379,7 @@ if mode == "Single crystal":
                 Ef = 4 * energy_input
 
                 # 元データを直接変更しない方が安全
-                #data_work[:,1] = 4 * data_work[:,1]
-                data_work = data.copy()
-                data_work[:,1] *= 4
+                #data[:,1] = 4 * data[:,1]
 
             else:
                 Ef = energy_input
@@ -383,8 +390,7 @@ if mode == "Single crystal":
             if lambda_half:
                 Ei = 4 * energy_input
 
-                #data_work[:,1] = 4 * data_work[:,1]
-                data_work[:,1] *= 4
+                #data[:,1] = 4 * data[:,1]
 
             else:
                 Ei = energy_input
@@ -413,9 +419,9 @@ if mode == "Single crystal":
 
         return np.array([qx,qy])
 
-    def calc_Q_region(Ei, Ef, hw, S2min):
+    def calc_Q_region(Ei, Ef, hw, S2min, S2interp_use):
 
-        S2max = float(S2interp(Ei))
+        S2max = float(S2interp_use(Ei))
 
         qmin = Qvector(S2min, Ei)
         qmax = Qvector(S2max, Ei)
@@ -454,7 +460,7 @@ if mode == "Single crystal":
 
     #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
     if mode=='Ef fixed':
-        hw_list=np.arange(0,np.max(data_work[:,1])-Ef,0.2)
+        hw_list=np.arange(0,np.max(data[:,1])-Ef,0.2)
     else:
         hw_list=np.arange(0,Ei,0.2)
 
@@ -468,17 +474,23 @@ if mode == "Single crystal":
         else:
             Ef = Ei - hw
 
+        if lambda_half:
+            S2interp_use = S2interp_half
+        else:
+            S2interp_use = S2interp
+
         result = calc_Q_region(
             Ei,
             Ef,
             hw,
-            S2min
+            S2min,
+            S2interp_use
         )
         
         regions.append(result[:4])
         S2_list.append(result[4])
 
-        S2max = float(S2interp(Ei))
+        S2max = float(S2interp_use(Ei))
 
         qmax = np.linalg.norm(
                 Qvector(S2max,Ei)
@@ -958,7 +970,7 @@ else:
         # Ei rangeを連続化
         Ei_list = np.arange(
             Ef + 0.01,
-            np.max(data_work[:,1]),
+            np.max(data[:,1]),
             0.2
         )
 
@@ -1039,8 +1051,6 @@ else:
             Q_min.append(qmin)
             Q_max.append(qmax)
             hw.append(w)
-
-
 
     Q_min = np.array(Q_min)
     Q_max = np.array(Q_max)
