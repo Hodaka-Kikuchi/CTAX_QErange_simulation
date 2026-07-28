@@ -814,6 +814,30 @@ if mode == "Single crystal":
         ]
     )
 
+    S2_ring = st.slider(
+        "S2 (deg)",
+        min_value=0.0,
+        max_value=180.0,
+        value=90.0,
+        step=0.1
+    )
+
+    if mode == "Ef fixed":
+        Ei_ring = Ef + hw_list[0]
+    else:
+        Ei_ring = Ei
+
+    Qring = np.linalg.norm(
+        Qvector(
+            S2_ring,
+            Ei_ring
+        )
+    )
+
+    st.write(
+        f"S2 = {S2_ring:.1f}°    |Q| = {Qring:.3f} Å⁻¹"
+    )
+
     Qplot = 1.2 * max(Qmax_list)
 
     fig.update_layout(
