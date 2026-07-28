@@ -89,7 +89,7 @@ st.markdown(
 )
 
 st.set_page_config(
-    page_title="CTAX QErange simulator",
+    page_title="TAS QErange simulator",
     layout="wide"
 )
 
@@ -98,7 +98,9 @@ st.title("TAS Q-E Range Simulator")
 display_names = {
     "CTAX": "CTAX@HFIR",
     "HB1": "HB-1@HFIR",
-    "HODACA": "HODACA@JRR-3"
+    "HODACA": "HODACA@JRR-3",
+    "PoplarL": "Poplar(Larmor)@HFIR",
+    "PoplarS": "Poplar(Standard)@HFIR"
 }
 
 with st.sidebar:
