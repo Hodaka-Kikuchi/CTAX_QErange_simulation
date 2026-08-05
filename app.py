@@ -98,6 +98,7 @@ st.title("TAS Q-E Range Simulator")
 display_names = {
     "CTAX": "CTAX@HFIR",
     "HB1": "HB-1@HFIR",
+    "HB3": "HB-3@HFIR",
     "HODACA": "HODACA/HER@JRR3",
     "PoplarL": "Poplar(Larmor)@HFIR",
     "PoplarS": "Poplar(Standard)@HFIR"
