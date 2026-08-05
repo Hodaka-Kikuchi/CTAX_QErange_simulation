@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import json
 import os
 
-# デバックの手順
+# デバックの手順(powershell上で動かす。)
 # cd C:\Users\h34\Documents\Python\CTAX
 # python -m streamlit run app.py
 
