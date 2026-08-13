@@ -79,10 +79,28 @@ instrument_files = sorted(
 st.markdown(
     """
     <style>
-        [data-testid="stSidebar"] {
-            min-width: 350px;
-            max-width: 350px;
-        }
+
+    /* --------------------------------------------------------
+       Calculation Point sticky area
+       -------------------------------------------------------- */
+
+    .calculation-sticky {
+        position: sticky;
+        top: 0rem;
+        z-index: 999;
+        background-color: var(--background-color);
+        padding-top: 0.5rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid rgba(128,128,128,0.35);
+    }
+
+
+    /* Sidebar heading spacing */
+    section[data-testid="stSidebar"] h3 {
+        margin-top: 0.8rem;
+    }
+
+
     </style>
     """,
     unsafe_allow_html=True
