@@ -504,7 +504,7 @@ if mode == "Single crystal":
             hw_list=np.arange(
                 0,
                 Ei_max-Ef,
-                0.2
+                0.1
             )
 
         else:
@@ -512,7 +512,7 @@ if mode == "Single crystal":
             hw_list=np.arange(
                 0,
                 Ei,
-                0.2
+                0.1
             )
 
     regions=[]
@@ -1030,7 +1030,7 @@ else:
         Ei_list = np.arange(
             Ef + 0.01,
             np.max(data[:,1]),
-            0.2
+            0.1
         )
 
         for Ei in Ei_list:
@@ -1078,7 +1078,7 @@ else:
         hw_list = np.arange(
             0,
             Ei-0.01,
-            0.2
+            0.1
         )
 
 
