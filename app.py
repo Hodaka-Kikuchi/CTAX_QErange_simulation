@@ -1183,8 +1183,7 @@ if mode == "Single crystal":
                 x_data.append(dark_x180)
                 y_data.append(dark_y180)
 
-                name_data.append("additional range (180°)")
-
+                name_data.append("additional range")
 
         step = dict(
             method="update",
