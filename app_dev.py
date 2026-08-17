@@ -8,7 +8,7 @@ import os
 
 # デバックの手順(powershell上で動かす。)
 # cd C:\Users\h34\Documents\Python\CTAX
-# python -m streamlit run app.py
+# python -m streamlit run app_dev.py
 
 # QErange_single_crystal2.pyのweb版
 
