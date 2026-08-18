@@ -437,24 +437,6 @@ if mode == "Single crystal":
 
         st.header("Additional angle")
 
-        col1, col2 = st.columns([1, 2])
-
-        with col1:
-            show_dark_angle = st.checkbox(
-                "show",
-                value=False,
-                key="show_dark_angle"
-            )
-
-        with col2:
-            dark_angle_type = st.radio(
-                "type",
-                ["Symmetric", "Asymmetric"],
-                horizontal=True,
-                index=0,
-                key="dark_angle_type"
-            )
-
         # Reference (h, k, l)
         st.markdown("**Bragg position**")
         col1, col2, col3, col4 = st.columns(4)
@@ -492,22 +474,61 @@ if mode == "Single crystal":
             )
 
         st.markdown("**s1 range**")
-        col1, col2 = st.columns(2)
+
+        # Header
+        col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
+
+        with col0:
+            st.markdown("**No.**")
 
         with col1:
-            dark_angle_from = st.number_input(
-                "From (deg)",
-                value=0.0,
-                step=1.0,
-                key="dark_angle_from"
-            )
+            st.markdown("**From (deg)**")
 
         with col2:
-            dark_angle_to = st.number_input(
-                "To (deg)",
-                value=0.0,
-                step=1.0,
-                key="dark_angle_to"
+            st.markdown("**To (deg)**")
+
+        with col3:
+            st.markdown("**Offset (deg)**")
+
+
+        dark_angle_ranges = []
+
+        for i in range(4):
+
+            col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
+
+            with col0:
+                st.markdown(f"**{i + 1}**")
+
+            with col1:
+                angle_from = st.number_input(
+                    "From (deg)",
+                    value=0.0,
+                    step=1.0,
+                    key=f"dark_from_{i}",
+                    label_visibility="collapsed"
+                )
+
+            with col2:
+                angle_to = st.number_input(
+                    "To (deg)",
+                    value=0.0,
+                    step=1.0,
+                    key=f"dark_to_{i}",
+                    label_visibility="collapsed"
+                )
+
+            with col3:
+                offset = st.number_input(
+                    "Offset (deg)",
+                    value=0.0,
+                    step=1.0,
+                    key=f"dark_offset_{i}",
+                    label_visibility="collapsed"
+                )
+
+            dark_angle_ranges.append(
+                (angle_from, angle_to, offset)
             )
 
     #----------------------------------------
@@ -689,132 +710,146 @@ if mode == "Single crystal":
     # ============================================================
 
     dark_regions = []
-    if dark_angle_type == "Symmetric":
-        dark_regions2 = []
 
-    if show_dark_angle:
+    # ----------------------------------------
+    # Calculate offset
+    # ----------------------------------------
 
-        # ----------------------------------------
-        # Calculate offset
-        # ----------------------------------------
+    # Reciprocal lattice vector of reference Bragg position
+    Q_ref = (
+        ref_h * astar
+        + ref_k * bstar
+        + ref_l * cstar
+    )
 
-        # Reciprocal lattice vector of reference Bragg position
-        Q_ref = (
-            ref_h * astar
-            + ref_k * bstar
-            + ref_l * cstar
+    d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
+
+
+    # ----------------------------------------
+    # Q_ref angle in the (u, v) coordinate
+    # ----------------------------------------
+
+    Q_ref_x = np.dot(Q_ref, ex)
+    Q_ref_y = np.dot(Q_ref, ey)
+
+    phi_ref = np.degrees(
+        np.arctan2(Q_ref_y, Q_ref_x)
+    )
+
+
+    # ----------------------------------------
+    # Neutron wavelength
+    # ----------------------------------------
+
+    if mode == 'Ef fixed':
+        wavelength = 9.044 / np.sqrt(Ef)
+    else:
+        wavelength = 9.044 / np.sqrt(Ei)
+
+
+    # ----------------------------------------
+    # Bragg angle
+    # ----------------------------------------
+
+    theta_ref = np.degrees(
+        np.arcsin(
+            wavelength / (2.0 * d_ref)
+        )
+    )
+
+
+    # ----------------------------------------
+    # Crystal angle offset
+    # ----------------------------------------
+
+    s1_offset = (
+        ref_s1
+        - theta_ref
+        + 180.0
+        - phi_ref
+    )
+
+    # --------------------------------------------------------
+    # Q calculation with S1
+    # --------------------------------------------------------
+
+    def calc_q(s1, s2, ki, kf, s1_offset):
+
+        ki_angle = np.deg2rad(
+            -s1 + s1_offset
         )
 
-        d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
-
-
-        # ----------------------------------------
-        # Q_ref angle in the (u, v) coordinate
-        # ----------------------------------------
-
-        Q_ref_x = np.dot(Q_ref, ex)
-        Q_ref_y = np.dot(Q_ref, ey)
-
-        phi_ref = np.degrees(
-            np.arctan2(Q_ref_y, Q_ref_x)
+        kf_angle = np.deg2rad(
+            s2 - s1 + s1_offset
         )
 
+        kix = ki * np.sin(ki_angle)
+        kiy = ki * np.cos(ki_angle)
 
-        # ----------------------------------------
-        # Neutron wavelength
-        # ----------------------------------------
+        kfx = kf * np.sin(kf_angle)
+        kfy = kf * np.cos(kf_angle)
 
+        qx = kix - kfx
+        qy = kiy - kfy
+
+        return qx, qy
+
+
+    # --------------------------------------------------------
+    # Calculate Dark angle for each hw
+    # --------------------------------------------------------
+
+    for i, hw in enumerate(hw_list):
+
+        # Energy for this hw
         if mode == 'Ef fixed':
-            wavelength = 9.044 / np.sqrt(Ef)
+            Ei_hw = Ef + hw
+            Ef_hw = Ef
         else:
-            wavelength = 9.044 / np.sqrt(Ei)
+            Ei_hw = Ei
+            Ef_hw = Ei - hw
 
+        # Wave vectors
+        ki = 0.6947 * np.sqrt(Ei_hw)
+        kf = 0.6947 * np.sqrt(Ef_hw)
 
-        # ----------------------------------------
-        # Bragg angle
-        # ----------------------------------------
+        # S2 range for this hw
+        S2max_hw = S2_list[i]
 
-        theta_ref = np.degrees(
-            np.arcsin(
-                wavelength / (2.0 * d_ref)
-            )
+        s2_dark = np.linspace(
+            S2min,
+            S2max_hw,
+            200
         )
 
 
-        # ----------------------------------------
-        # Crystal angle offset
-        # ----------------------------------------
+        # ========================================================
+        # Dark angle regions for this hw
+        # ========================================================
 
-        s1_offset = (
-            ref_s1
-            - theta_ref
-            + 180.0
-            - phi_ref
-        )
+        dark_regions_hw = []
 
 
-        # Dark angle range
-        s1_from = dark_angle_from
-        s1_to   = dark_angle_to
+        # ========================================================
+        # Loop over additional s1 ranges
+        # ========================================================
 
-        # --------------------------------------------------------
-        # Q calculation with S1
-        # --------------------------------------------------------
+        for angle_from, angle_to, offset in dark_angle_ranges:
 
-        def calc_q(s1, s2, ki, kf, s1_offset):
+            # 0, 0 は未使用
+            if angle_from == 0 and angle_to == 0:
+                continue
 
-            ki_angle = np.deg2rad(
-                -s1 + s1_offset
-            )
-
-            kf_angle = np.deg2rad(
-                s2 - s1 + s1_offset
-            )
-
-            kix = ki * np.sin(ki_angle)
-            kiy = ki * np.cos(ki_angle)
-
-            kfx = kf * np.sin(kf_angle)
-            kfy = kf * np.cos(kf_angle)
-
-            qx = kix - kfx
-            qy = kiy - kfy
-
-            return qx, qy
-
-
-        # --------------------------------------------------------
-        # Calculate Dark angle for each hw
-        # --------------------------------------------------------
-
-        for i, hw in enumerate(hw_list):
-
-            # Energy for this hw
-            if mode == 'Ef fixed':
-                Ei_hw = Ef + hw
-                Ef_hw = Ef
-            else:
-                Ei_hw = Ei
-                Ef_hw = Ei - hw
-
-            # Wave vectors
-            ki = 0.6947 * np.sqrt(Ei_hw)
-            kf = 0.6947 * np.sqrt(Ef_hw)
-
-            # S2 range for this hw
-            S2max_hw = S2_list[i]
-
-            s2_dark = np.linspace(
-                S2min,
-                S2max_hw,
-                200
-            )
+            # Actual s1 positions
+            s1_from = offset + angle_from
+            s1_to   = offset + angle_to
 
 
             # ====================================================
+            # kf side
+            # ====================================================
+
             # S1 = From
-            # ====================================================
-
             dark_x_from = []
             dark_y_from = []
 
@@ -832,10 +867,7 @@ if mode == "Single crystal":
                 dark_y_from.append(qy)
 
 
-            # ====================================================
             # S1 = To
-            # ====================================================
-
             dark_x_to = []
             dark_y_to = []
 
@@ -853,7 +885,6 @@ if mode == "Single crystal":
                 dark_y_to.append(qy)
 
 
-            # Convert to numpy arrays
             dark_x_from = np.array(dark_x_from)
             dark_y_from = np.array(dark_y_from)
 
@@ -862,14 +893,60 @@ if mode == "Single crystal":
 
 
             # ====================================================
-            # Make closed region
+            # ki side
+            #
+            # s1_ki = s1_kf + 180 - S2
             # ====================================================
 
-            # ========================================================
-            # Construct closed Dark angle boundary
-            # ========================================================
+            dark_x_from_ki = []
+            dark_y_from_ki = []
 
-            # S2 = S2max
+            dark_x_to_ki = []
+            dark_y_to_ki = []
+
+            for s2 in s2_dark:
+
+                # From
+                s1_from_ki = s1_from + 180.0 - s2
+
+                qx, qy = calc_q(
+                    s1_from_ki,
+                    s2,
+                    ki,
+                    kf,
+                    s1_offset
+                )
+
+                dark_x_from_ki.append(qx)
+                dark_y_from_ki.append(qy)
+
+
+                # To
+                s1_to_ki = s1_to + 180.0 - s2
+
+                qx, qy = calc_q(
+                    s1_to_ki,
+                    s2,
+                    ki,
+                    kf,
+                    s1_offset
+                )
+
+                dark_x_to_ki.append(qx)
+                dark_y_to_ki.append(qy)
+
+
+            dark_x_from_ki = np.array(dark_x_from_ki)
+            dark_y_from_ki = np.array(dark_y_from_ki)
+
+            dark_x_to_ki = np.array(dark_x_to_ki)
+            dark_y_to_ki = np.array(dark_y_to_ki)
+
+
+            # ====================================================
+            # kf side closed region
+            # ====================================================
+
             s1_edge_top = np.linspace(
                 s1_from,
                 s1_to,
@@ -893,7 +970,6 @@ if mode == "Single crystal":
                 dark_y_top.append(qy)
 
 
-            # S2 = S2min
             s1_edge_bottom = np.linspace(
                 s1_to,
                 s1_from,
@@ -917,14 +993,14 @@ if mode == "Single crystal":
                 dark_y_bottom.append(qy)
 
 
-            dark_x = np.concatenate([
+            dark_x_kf = np.concatenate([
                 dark_x_from,
                 dark_x_top,
                 dark_x_to[::-1],
                 dark_x_bottom
             ])
 
-            dark_y = np.concatenate([
+            dark_y_kf = np.concatenate([
                 dark_y_from,
                 dark_y_top,
                 dark_y_to[::-1],
@@ -932,20 +1008,93 @@ if mode == "Single crystal":
             ])
 
 
-            dark_regions.append(
+            # ====================================================
+            # ki side closed region
+            # ====================================================
+
+            # S2 = S2max
+            s1_edge_top_ki = np.linspace(
+                s1_from + 180.0 - S2max_hw,
+                s1_to   + 180.0 - S2max_hw,
+                100
+            )
+
+            dark_x_top_ki = []
+            dark_y_top_ki = []
+
+            for s1 in s1_edge_top_ki:
+
+                qx, qy = calc_q(
+                    s1,
+                    S2max_hw,
+                    ki,
+                    kf,
+                    s1_offset
+                )
+
+                dark_x_top_ki.append(qx)
+                dark_y_top_ki.append(qy)
+
+
+            # S2 = S2min
+            s1_edge_bottom_ki = np.linspace(
+                s1_to   + 180.0 - S2min,
+                s1_from + 180.0 - S2min,
+                100
+            )
+
+            dark_x_bottom_ki = []
+            dark_y_bottom_ki = []
+
+            for s1 in s1_edge_bottom_ki:
+
+                qx, qy = calc_q(
+                    s1,
+                    S2min,
+                    ki,
+                    kf,
+                    s1_offset
+                )
+
+                dark_x_bottom_ki.append(qx)
+                dark_y_bottom_ki.append(qy)
+
+
+            dark_x_ki = np.concatenate([
+                dark_x_from_ki,
+                dark_x_top_ki,
+                dark_x_to_ki[::-1],
+                dark_x_bottom_ki
+            ])
+
+            dark_y_ki = np.concatenate([
+                dark_y_from_ki,
+                dark_y_top_ki,
+                dark_y_to_ki[::-1],
+                dark_y_bottom_ki
+            ])
+
+
+            dark_regions_hw.append(
                 (
-                    dark_x,
-                    dark_y
+                    dark_x_kf,
+                    dark_y_kf
                 )
             )
 
-            if dark_angle_type == "Symmetric":
-                dark_regions2.append(
-                                (
-                                    -dark_x,
-                                    -dark_y
-                                )
-                            )
+            dark_regions_hw.append(
+                (
+                    dark_x_ki,
+                    dark_y_ki
+                )
+            )
+
+
+        # ========================================================
+        # Store all ranges for this hw
+        # ========================================================
+
+        dark_regions.append(dark_regions_hw)
 
     #----------------------------------------
     # fill accessible region
@@ -1093,40 +1242,28 @@ if mode == "Single crystal":
     )
 
     # ============================================================
-    # Dark angle trace
+    # Additional range trace
     # ============================================================
 
-    if show_dark_angle:
-
-        dark_x0, dark_y0 = dark_regions[0]
+    for dark_x0, dark_y0 in dark_regions[0]:
 
         fig.add_trace(
             go.Scatter(
                 x=dark_x0,
                 y=dark_y0,
                 fill="toself",
-                name="additional range",
+                name="Additional range",
                 line=dict(width=0),
                 fillcolor="rgba(0,0,255,0.15)"
             )
         )
 
-        if dark_angle_type == "Symmetric":
 
-            dark_x180, dark_y180 = dark_regions2[0]
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=dark_x180,
-                    y=dark_y180,
-                    fill="toself",
-                    name="additional range",
-                    line=dict(width=0),
-                    fillcolor="rgba(0,0,255,0.15)"
-                )
-            )
+    # ============================================================
+    # Slider
+    # ============================================================
 
-    steps=[]
+    steps = []
 
     for i, hw in enumerate(hw_list):
 
@@ -1161,29 +1298,16 @@ if mode == "Single crystal":
 
 
         # --------------------------------------------------------
-        # Dark angle
+        # Additional range
         # --------------------------------------------------------
 
-        if show_dark_angle:
-
-            # Original dark angle
-            dark_x, dark_y = dark_regions[i]
+        for dark_x, dark_y in dark_regions[i]:
 
             x_data.append(dark_x)
             y_data.append(dark_y)
 
-            name_data.append("additional range")
+            name_data.append("Additional range")
 
-
-            # 180 degree rotated dark angle
-            if dark_angle_type == "Symmetric":
-
-                dark_x180, dark_y180 = dark_regions2[i]
-
-                x_data.append(dark_x180)
-                y_data.append(dark_y180)
-
-                name_data.append("additional range")
 
         step = dict(
             method="update",
