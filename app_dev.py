@@ -217,14 +217,14 @@ if mode == "Single crystal":
         with col2:
             b = st.number_input(
                 "b (Å)",
-                value=6.00,
+                value=5.00,
                 step=0.01
             )
 
         with col3:
             c = st.number_input(
                 "c (Å)",
-                value=7.00,
+                value=5.00,
                 step=0.01
             )
 
@@ -435,7 +435,7 @@ if mode == "Single crystal":
             key=f"S2min_{instrument}"
         )
 
-        st.header("Additional angle")
+        st.header("Dark angle")
 
         # Reference (h, k, l)
         st.markdown("**Bragg position**")
@@ -600,7 +600,7 @@ if mode == "Single crystal":
             hw_list=np.arange(
                 0,
                 Ei_max-Ef,
-                0.1
+                0.2
             )
 
         else:
@@ -608,7 +608,7 @@ if mode == "Single crystal":
             hw_list=np.arange(
                 0,
                 Ei,
-                0.1
+                0.2
             )
 
     regions=[]
@@ -709,7 +709,8 @@ if mode == "Single crystal":
     # Dark angle
     # ============================================================
 
-    dark_regions = []
+    dark_regions_kf = []
+    dark_regions_ki = []
 
     # ----------------------------------------
     # Calculate offset
@@ -827,8 +828,8 @@ if mode == "Single crystal":
         # Dark angle regions for this hw
         # ========================================================
 
-        dark_regions_hw = []
-
+        dark_regions_hw_kf = []
+        dark_regions_hw_ki = []
 
         # ========================================================
         # Loop over additional s1 ranges
@@ -907,7 +908,7 @@ if mode == "Single crystal":
             for s2 in s2_dark:
 
                 # From
-                s1_from_ki = s1_from + 180.0 - s2
+                s1_from_ki = s1_from - (180.0 - s2)
 
                 qx, qy = calc_q(
                     s1_from_ki,
@@ -922,7 +923,7 @@ if mode == "Single crystal":
 
 
                 # To
-                s1_to_ki = s1_to + 180.0 - s2
+                s1_to_ki = s1_to - (180.0 - s2)
 
                 qx, qy = calc_q(
                     s1_to_ki,
@@ -1014,8 +1015,8 @@ if mode == "Single crystal":
 
             # S2 = S2max
             s1_edge_top_ki = np.linspace(
-                s1_from + 180.0 - S2max_hw,
-                s1_to   + 180.0 - S2max_hw,
+                s1_from - (180.0 - S2max_hw),
+                s1_to   - (180.0 - S2max_hw),
                 100
             )
 
@@ -1038,8 +1039,8 @@ if mode == "Single crystal":
 
             # S2 = S2min
             s1_edge_bottom_ki = np.linspace(
-                s1_to   + 180.0 - S2min,
-                s1_from + 180.0 - S2min,
+                s1_to   - (180.0 - S2min),
+                s1_from - (180.0 - S2min),
                 100
             )
 
@@ -1075,14 +1076,14 @@ if mode == "Single crystal":
             ])
 
 
-            dark_regions_hw.append(
+            dark_regions_hw_kf.append(
                 (
                     dark_x_kf,
                     dark_y_kf
                 )
             )
 
-            dark_regions_hw.append(
+            dark_regions_hw_ki.append(
                 (
                     dark_x_ki,
                     dark_y_ki
@@ -1094,7 +1095,8 @@ if mode == "Single crystal":
         # Store all ranges for this hw
         # ========================================================
 
-        dark_regions.append(dark_regions_hw)
+        dark_regions_kf.append(dark_regions_hw_kf)
+        dark_regions_ki.append(dark_regions_hw_ki)
 
     #----------------------------------------
     # fill accessible region
@@ -1242,19 +1244,32 @@ if mode == "Single crystal":
     )
 
     # ============================================================
-    # Additional range trace
+    # Dark angle trace
     # ============================================================
 
-    for dark_x0, dark_y0 in dark_regions[0]:
+    for dark_x0, dark_y0 in dark_regions_kf[0]:
 
         fig.add_trace(
             go.Scatter(
                 x=dark_x0,
                 y=dark_y0,
                 fill="toself",
-                name="Additional range",
+                name="Dark angle (kf side)",
                 line=dict(width=0),
                 fillcolor="rgba(0,0,255,0.15)"
+            )
+        )
+
+    for dark_x0, dark_y0 in dark_regions_ki[0]:
+    
+        fig.add_trace(
+            go.Scatter(
+                x=dark_x0,
+                y=dark_y0,
+                fill="toself",
+                name="Dark angle (ki side)",
+                line=dict(width=0),
+                fillcolor="rgba(0,255,0,0.15)"
             )
         )
 
@@ -1298,16 +1313,22 @@ if mode == "Single crystal":
 
 
         # --------------------------------------------------------
-        # Additional range
+        # Dark angle
         # --------------------------------------------------------
 
-        for dark_x, dark_y in dark_regions[i]:
+        for dark_x, dark_y in dark_regions_kf[i]:
 
             x_data.append(dark_x)
             y_data.append(dark_y)
 
-            name_data.append("Additional range")
+            name_data.append("Dark angle (kf side)")
 
+        for dark_x, dark_y in dark_regions_ki[i]:
+        
+            x_data.append(dark_x)
+            y_data.append(dark_y)
+
+            name_data.append("Dark angle (ki side)")
 
         step = dict(
             method="update",
