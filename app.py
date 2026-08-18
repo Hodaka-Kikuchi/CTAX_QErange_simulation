@@ -435,7 +435,7 @@ if mode == "Single crystal":
             key=f"S2min_{instrument}"
         )
 
-        st.header("Additional angle")
+        st.header("additional range")
 
         col1, col2 = st.columns([1, 2])
 
