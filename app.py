@@ -510,6 +510,8 @@ if mode == "Single crystal":
                 key="dark_angle_to"
             )
 
+        st.markdown("**Note:** Sample rotation: + is clockwise, − is counterclockwise.")
+
     #----------------------------------------
     # calculation range
     #----------------------------------------
