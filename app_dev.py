@@ -570,6 +570,12 @@ if mode == "Single crystal":
                 (angle_from, angle_to, offset)
             )
 
+        # --------------------------------------------------------
+        # Add dark angle
+        # --------------------------------------------------------
+
+        add_dark_angle = st.button("Add dark angle")
+
     #----------------------------------------
     # calculation range
     #----------------------------------------
@@ -744,422 +750,424 @@ if mode == "Single crystal":
     xmax=np.array(xmax)
     ymax=np.array(ymax)
 
-    # ============================================================
-    # Dark angle
-    # ============================================================
+    if add_dark_angle:
 
-    dark_regions_kf = []
-    dark_regions_ki = []
+        # ============================================================
+        # Dark angle
+        # ============================================================
 
-    # ----------------------------------------
-    # Calculate offset
-    # ----------------------------------------
+        dark_regions_kf = []
+        dark_regions_ki = []
 
-    # Reciprocal lattice vector of reference Bragg position
-    Q_ref = (
-        ref_h * astar
-        + ref_k * bstar
-        + ref_l * cstar
-    )
+        # ----------------------------------------
+        # Calculate offset
+        # ----------------------------------------
 
-    d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
-
-    # ----------------------------------------
-    # Q_ref angle in the (u, v) coordinate
-    # ----------------------------------------
-
-    Q_ref_x = np.dot(Q_ref, ex)
-    Q_ref_y = np.dot(Q_ref, ey)
-
-    phi_ref = np.degrees(
-        np.arctan2(Q_ref_y, Q_ref_x)
-    )
-
-    # ----------------------------------------
-    # Neutron wavelength
-    # ----------------------------------------
-
-    if mode == 'Ef fixed':
-        wavelength = 9.044 / np.sqrt(Ef)
-    else:
-        wavelength = 9.044 / np.sqrt(Ei)
-
-    # ----------------------------------------
-    # Bragg angle
-    # ----------------------------------------
-
-    theta_ref = np.degrees(
-        np.arcsin(
-            wavelength / (2.0 * d_ref)
-        )
-    )
-
-    # ----------------------------------------
-    # angle between Q and kf, 0 deg means just block kf
-    # ----------------------------------------
-    if dark_angle_reference == "Reference Q":
-
-        Q_offset = 90 + theta_ref
-
-    else:
-
-        Q_offset = 2.0 * theta_ref
-
-    # ----------------------------------------
-    # Crystal angle offset
-    # ----------------------------------------
-
-    s1_offset = (
-        ref_s1
-        - theta_ref
-        + 180.0
-        - phi_ref
-    )
-
-    # --------------------------------------------------------
-    # Q calculation with S1
-    # --------------------------------------------------------
-
-    def calc_q(s1, s2, ki, kf, s1_offset):
-
-        ki_angle = np.deg2rad(
-            -s1 + s1_offset
+        # Reciprocal lattice vector of reference Bragg position
+        Q_ref = (
+            ref_h * astar
+            + ref_k * bstar
+            + ref_l * cstar
         )
 
-        kf_angle = np.deg2rad(
-            s2 - s1 + s1_offset
+        d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
+
+        # ----------------------------------------
+        # Q_ref angle in the (u, v) coordinate
+        # ----------------------------------------
+
+        Q_ref_x = np.dot(Q_ref, ex)
+        Q_ref_y = np.dot(Q_ref, ey)
+
+        phi_ref = np.degrees(
+            np.arctan2(Q_ref_y, Q_ref_x)
         )
 
-        kix = ki * np.sin(ki_angle)
-        kiy = ki * np.cos(ki_angle)
+        # ----------------------------------------
+        # Neutron wavelength
+        # ----------------------------------------
 
-        kfx = kf * np.sin(kf_angle)
-        kfy = kf * np.cos(kf_angle)
+        if mode == 'Ef fixed':
+            wavelength = 9.044 / np.sqrt(Ef)
+        else:
+            wavelength = 9.044 / np.sqrt(Ei)
 
-        qx = kix - kfx
-        qy = kiy - kfy
+        # ----------------------------------------
+        # Bragg angle
+        # ----------------------------------------
 
-        if instrument_sense == "+-+":
+        theta_ref = np.degrees(
+            np.arcsin(
+                wavelength / (2.0 * d_ref)
+            )
+        )
 
-            # Reference Q direction
-            eQ = np.array([
-                Q_ref_x,
-                Q_ref_y
-            ])
+        # ----------------------------------------
+        # angle between Q and kf, 0 deg means just block kf
+        # ----------------------------------------
+        if dark_angle_reference == "Reference Q":
 
-            eQ /= np.linalg.norm(eQ)
+            Q_offset = 90 + theta_ref
 
-            # Reflection with respect to Reference-Q axis
-            q = np.array([qx, qy])
+        else:
 
-            qx, qy = (
-                2.0 * np.dot(q, eQ) * eQ - q
+            Q_offset = 2.0 * theta_ref
+
+        # ----------------------------------------
+        # Crystal angle offset
+        # ----------------------------------------
+
+        s1_offset = (
+            ref_s1
+            - theta_ref
+            + 180.0
+            - phi_ref
+        )
+
+        # --------------------------------------------------------
+        # Q calculation with S1
+        # --------------------------------------------------------
+
+        def calc_q(s1, s2, ki, kf, s1_offset):
+
+            ki_angle = np.deg2rad(
+                -s1 + s1_offset
             )
 
-        return qx, qy
+            kf_angle = np.deg2rad(
+                s2 - s1 + s1_offset
+            )
 
-    # --------------------------------------------------------
-    # Calculate Dark angle for each hw
-    # --------------------------------------------------------
+            kix = ki * np.sin(ki_angle)
+            kiy = ki * np.cos(ki_angle)
 
-    for i, hw in enumerate(hw_list):
+            kfx = kf * np.sin(kf_angle)
+            kfy = kf * np.cos(kf_angle)
 
-        # Energy for this hw
-        if mode == 'Ef fixed':
-            Ei_hw = Ef + hw
-            Ef_hw = Ef
-        else:
-            Ei_hw = Ei
-            Ef_hw = Ei - hw
-
-        # Wave vectors
-        ki = 0.6947 * np.sqrt(Ei_hw)
-        kf = 0.6947 * np.sqrt(Ef_hw)
-
-        # S2 range for this hw
-        S2max_hw = S2_list[i]
-
-        s2_dark = np.linspace(
-            S2min,
-            S2max_hw,
-            200
-        )
-
-        # ========================================================
-        # Dark angle regions for this hw
-        # ========================================================
-
-        dark_regions_hw_kf = []
-        dark_regions_hw_ki = []
-
-        # ========================================================
-        # Loop over additional s1 ranges
-        # ========================================================
-
-        for angle_from, angle_to, offset in dark_angle_ranges:
-
-            # 0, 0 は未使用
-            if angle_from == 0 and angle_to == 0:
-                continue
+            qx = kix - kfx
+            qy = kiy - kfy
 
             if instrument_sense == "+-+":
-                offset = -offset
-                angle_from = -angle_from
-                angle_to = -angle_to
 
-            # Actual s1 positions
-            s1_from = offset + angle_from - Q_offset
-            s1_to   = offset + angle_to - Q_offset
+                # Reference Q direction
+                eQ = np.array([
+                    Q_ref_x,
+                    Q_ref_y
+                ])
 
-            # ====================================================
-            # kf side
-            # ====================================================
+                eQ /= np.linalg.norm(eQ)
 
-            # S1 = From
-            dark_x_from = []
-            dark_y_from = []
+                # Reflection with respect to Reference-Q axis
+                q = np.array([qx, qy])
 
-            for s2 in s2_dark:
+                qx, qy = (
+                    2.0 * np.dot(q, eQ) * eQ - q
+                )
 
-                qx, qy = calc_q(
+            return qx, qy
+
+        # --------------------------------------------------------
+        # Calculate Dark angle for each hw
+        # --------------------------------------------------------
+
+        for i, hw in enumerate(hw_list):
+
+            # Energy for this hw
+            if mode == 'Ef fixed':
+                Ei_hw = Ef + hw
+                Ef_hw = Ef
+            else:
+                Ei_hw = Ei
+                Ef_hw = Ei - hw
+
+            # Wave vectors
+            ki = 0.6947 * np.sqrt(Ei_hw)
+            kf = 0.6947 * np.sqrt(Ef_hw)
+
+            # S2 range for this hw
+            S2max_hw = S2_list[i]
+
+            s2_dark = np.linspace(
+                S2min,
+                S2max_hw,
+                200
+            )
+
+            # ========================================================
+            # Dark angle regions for this hw
+            # ========================================================
+
+            dark_regions_hw_kf = []
+            dark_regions_hw_ki = []
+
+            # ========================================================
+            # Loop over additional s1 ranges
+            # ========================================================
+
+            for angle_from, angle_to, offset in dark_angle_ranges:
+
+                # 0, 0 は未使用
+                if angle_from == 0 and angle_to == 0:
+                    continue
+
+                if instrument_sense == "+-+":
+                    offset = -offset
+                    angle_from = -angle_from
+                    angle_to = -angle_to
+
+                # Actual s1 positions
+                s1_from = offset + angle_from - Q_offset
+                s1_to   = offset + angle_to - Q_offset
+
+                # ====================================================
+                # kf side
+                # ====================================================
+
+                # S1 = From
+                dark_x_from = []
+                dark_y_from = []
+
+                for s2 in s2_dark:
+
+                    qx, qy = calc_q(
+                        s1_from,
+                        s2,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_from.append(qx)
+                    dark_y_from.append(qy)
+
+                # S1 = To
+                dark_x_to = []
+                dark_y_to = []
+
+                for s2 in s2_dark:
+
+                    qx, qy = calc_q(
+                        s1_to,
+                        s2,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_to.append(qx)
+                    dark_y_to.append(qy)
+
+
+                dark_x_from = np.array(dark_x_from)
+                dark_y_from = np.array(dark_y_from)
+
+                dark_x_to = np.array(dark_x_to)
+                dark_y_to = np.array(dark_y_to)
+
+                # ====================================================
+                # ki side
+                #
+                # s1_ki = s1_kf + 180 - S2
+                # ====================================================
+
+                dark_x_from_ki = []
+                dark_y_from_ki = []
+
+                dark_x_to_ki = []
+                dark_y_to_ki = []
+
+                for s2 in s2_dark:
+
+                    # From
+                    s1_from_ki = s1_from - (180.0 - s2)
+
+                    qx, qy = calc_q(
+                        s1_from_ki,
+                        s2,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_from_ki.append(qx)
+                    dark_y_from_ki.append(qy)
+
+
+                    # To
+                    s1_to_ki = s1_to - (180.0 - s2)
+
+                    qx, qy = calc_q(
+                        s1_to_ki,
+                        s2,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_to_ki.append(qx)
+                    dark_y_to_ki.append(qy)
+
+
+                dark_x_from_ki = np.array(dark_x_from_ki)
+                dark_y_from_ki = np.array(dark_y_from_ki)
+
+                dark_x_to_ki = np.array(dark_x_to_ki)
+                dark_y_to_ki = np.array(dark_y_to_ki)
+
+
+                # ====================================================
+                # kf side closed region
+                # ====================================================
+
+                s1_edge_top = np.linspace(
                     s1_from,
-                    s2,
-                    ki,
-                    kf,
-                    s1_offset
-                )
-
-                dark_x_from.append(qx)
-                dark_y_from.append(qy)
-
-            # S1 = To
-            dark_x_to = []
-            dark_y_to = []
-
-            for s2 in s2_dark:
-
-                qx, qy = calc_q(
                     s1_to,
-                    s2,
-                    ki,
-                    kf,
-                    s1_offset
+                    100
                 )
 
-                dark_x_to.append(qx)
-                dark_y_to.append(qy)
+                dark_x_top = []
+                dark_y_top = []
+
+                for s1 in s1_edge_top:
+
+                    qx, qy = calc_q(
+                        s1,
+                        S2max_hw,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_top.append(qx)
+                    dark_y_top.append(qy)
 
 
-            dark_x_from = np.array(dark_x_from)
-            dark_y_from = np.array(dark_y_from)
-
-            dark_x_to = np.array(dark_x_to)
-            dark_y_to = np.array(dark_y_to)
-
-            # ====================================================
-            # ki side
-            #
-            # s1_ki = s1_kf + 180 - S2
-            # ====================================================
-
-            dark_x_from_ki = []
-            dark_y_from_ki = []
-
-            dark_x_to_ki = []
-            dark_y_to_ki = []
-
-            for s2 in s2_dark:
-
-                # From
-                s1_from_ki = s1_from - (180.0 - s2)
-
-                qx, qy = calc_q(
-                    s1_from_ki,
-                    s2,
-                    ki,
-                    kf,
-                    s1_offset
+                s1_edge_bottom = np.linspace(
+                    s1_to,
+                    s1_from,
+                    100
                 )
 
-                dark_x_from_ki.append(qx)
-                dark_y_from_ki.append(qy)
+                dark_x_bottom = []
+                dark_y_bottom = []
+
+                for s1 in s1_edge_bottom:
+
+                    qx, qy = calc_q(
+                        s1,
+                        S2min,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_bottom.append(qx)
+                    dark_y_bottom.append(qy)
 
 
-                # To
-                s1_to_ki = s1_to - (180.0 - s2)
+                dark_x_kf = np.concatenate([
+                    dark_x_from,
+                    dark_x_top,
+                    dark_x_to[::-1],
+                    dark_x_bottom
+                ])
 
-                qx, qy = calc_q(
-                    s1_to_ki,
-                    s2,
-                    ki,
-                    kf,
-                    s1_offset
+                dark_y_kf = np.concatenate([
+                    dark_y_from,
+                    dark_y_top,
+                    dark_y_to[::-1],
+                    dark_y_bottom
+                ])
+
+
+                # ====================================================
+                # ki side closed region
+                # ====================================================
+
+                # S2 = S2max
+                s1_edge_top_ki = np.linspace(
+                    s1_from - (180.0 - S2max_hw),
+                    s1_to   - (180.0 - S2max_hw),
+                    100
                 )
 
-                dark_x_to_ki.append(qx)
-                dark_y_to_ki.append(qy)
+                dark_x_top_ki = []
+                dark_y_top_ki = []
+
+                for s1 in s1_edge_top_ki:
+
+                    qx, qy = calc_q(
+                        s1,
+                        S2max_hw,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_top_ki.append(qx)
+                    dark_y_top_ki.append(qy)
 
 
-            dark_x_from_ki = np.array(dark_x_from_ki)
-            dark_y_from_ki = np.array(dark_y_from_ki)
-
-            dark_x_to_ki = np.array(dark_x_to_ki)
-            dark_y_to_ki = np.array(dark_y_to_ki)
-
-
-            # ====================================================
-            # kf side closed region
-            # ====================================================
-
-            s1_edge_top = np.linspace(
-                s1_from,
-                s1_to,
-                100
-            )
-
-            dark_x_top = []
-            dark_y_top = []
-
-            for s1 in s1_edge_top:
-
-                qx, qy = calc_q(
-                    s1,
-                    S2max_hw,
-                    ki,
-                    kf,
-                    s1_offset
+                # S2 = S2min
+                s1_edge_bottom_ki = np.linspace(
+                    s1_to   - (180.0 - S2min),
+                    s1_from - (180.0 - S2min),
+                    100
                 )
 
-                dark_x_top.append(qx)
-                dark_y_top.append(qy)
+                dark_x_bottom_ki = []
+                dark_y_bottom_ki = []
+
+                for s1 in s1_edge_bottom_ki:
+
+                    qx, qy = calc_q(
+                        s1,
+                        S2min,
+                        ki,
+                        kf,
+                        s1_offset
+                    )
+
+                    dark_x_bottom_ki.append(qx)
+                    dark_y_bottom_ki.append(qy)
 
 
-            s1_edge_bottom = np.linspace(
-                s1_to,
-                s1_from,
-                100
-            )
+                dark_x_ki = np.concatenate([
+                    dark_x_from_ki,
+                    dark_x_top_ki,
+                    dark_x_to_ki[::-1],
+                    dark_x_bottom_ki
+                ])
 
-            dark_x_bottom = []
-            dark_y_bottom = []
+                dark_y_ki = np.concatenate([
+                    dark_y_from_ki,
+                    dark_y_top_ki,
+                    dark_y_to_ki[::-1],
+                    dark_y_bottom_ki
+                ])
 
-            for s1 in s1_edge_bottom:
 
-                qx, qy = calc_q(
-                    s1,
-                    S2min,
-                    ki,
-                    kf,
-                    s1_offset
+                dark_regions_hw_kf.append(
+                    (
+                        dark_x_kf,
+                        dark_y_kf
+                    )
                 )
 
-                dark_x_bottom.append(qx)
-                dark_y_bottom.append(qy)
-
-
-            dark_x_kf = np.concatenate([
-                dark_x_from,
-                dark_x_top,
-                dark_x_to[::-1],
-                dark_x_bottom
-            ])
-
-            dark_y_kf = np.concatenate([
-                dark_y_from,
-                dark_y_top,
-                dark_y_to[::-1],
-                dark_y_bottom
-            ])
-
-
-            # ====================================================
-            # ki side closed region
-            # ====================================================
-
-            # S2 = S2max
-            s1_edge_top_ki = np.linspace(
-                s1_from - (180.0 - S2max_hw),
-                s1_to   - (180.0 - S2max_hw),
-                100
-            )
-
-            dark_x_top_ki = []
-            dark_y_top_ki = []
-
-            for s1 in s1_edge_top_ki:
-
-                qx, qy = calc_q(
-                    s1,
-                    S2max_hw,
-                    ki,
-                    kf,
-                    s1_offset
+                dark_regions_hw_ki.append(
+                    (
+                        dark_x_ki,
+                        dark_y_ki
+                    )
                 )
 
-                dark_x_top_ki.append(qx)
-                dark_y_top_ki.append(qy)
 
+            # ========================================================
+            # Store all ranges for this hw
+            # ========================================================
 
-            # S2 = S2min
-            s1_edge_bottom_ki = np.linspace(
-                s1_to   - (180.0 - S2min),
-                s1_from - (180.0 - S2min),
-                100
-            )
-
-            dark_x_bottom_ki = []
-            dark_y_bottom_ki = []
-
-            for s1 in s1_edge_bottom_ki:
-
-                qx, qy = calc_q(
-                    s1,
-                    S2min,
-                    ki,
-                    kf,
-                    s1_offset
-                )
-
-                dark_x_bottom_ki.append(qx)
-                dark_y_bottom_ki.append(qy)
-
-
-            dark_x_ki = np.concatenate([
-                dark_x_from_ki,
-                dark_x_top_ki,
-                dark_x_to_ki[::-1],
-                dark_x_bottom_ki
-            ])
-
-            dark_y_ki = np.concatenate([
-                dark_y_from_ki,
-                dark_y_top_ki,
-                dark_y_to_ki[::-1],
-                dark_y_bottom_ki
-            ])
-
-
-            dark_regions_hw_kf.append(
-                (
-                    dark_x_kf,
-                    dark_y_kf
-                )
-            )
-
-            dark_regions_hw_ki.append(
-                (
-                    dark_x_ki,
-                    dark_y_ki
-                )
-            )
-
-
-        # ========================================================
-        # Store all ranges for this hw
-        # ========================================================
-
-        dark_regions_kf.append(dark_regions_hw_kf)
-        dark_regions_ki.append(dark_regions_hw_ki)
+            dark_regions_kf.append(dark_regions_hw_kf)
+            dark_regions_ki.append(dark_regions_hw_ki)
 
     #----------------------------------------
     # fill accessible region
@@ -1306,35 +1314,37 @@ if mode == "Single crystal":
         )
     )
 
-    # ============================================================
-    # Dark angle trace
-    # ============================================================
+    if add_dark_angle:
 
-    for dark_x0, dark_y0 in dark_regions_kf[0]:
+        # ============================================================
+        # Dark angle trace
+        # ============================================================
 
-        fig.add_trace(
-            go.Scatter(
-                x=dark_x0,
-                y=dark_y0,
-                fill="toself",
-                name="Dark angle (kf side)",
-                line=dict(width=0),
-                fillcolor="rgba(0,0,255,0.15)"
+        for dark_x0, dark_y0 in dark_regions_kf[0]:
+
+            fig.add_trace(
+                go.Scatter(
+                    x=dark_x0,
+                    y=dark_y0,
+                    fill="toself",
+                    name="Dark angle (kf side)",
+                    line=dict(width=0),
+                    fillcolor="rgba(0,0,255,0.15)"
+                )
             )
-        )
 
-    for dark_x0, dark_y0 in dark_regions_ki[0]:
-    
-        fig.add_trace(
-            go.Scatter(
-                x=dark_x0,
-                y=dark_y0,
-                fill="toself",
-                name="Dark angle (ki side)",
-                line=dict(width=0),
-                fillcolor="rgba(0,255,0,0.15)"
+        for dark_x0, dark_y0 in dark_regions_ki[0]:
+        
+            fig.add_trace(
+                go.Scatter(
+                    x=dark_x0,
+                    y=dark_y0,
+                    fill="toself",
+                    name="Dark angle (ki side)",
+                    line=dict(width=0),
+                    fillcolor="rgba(0,255,0,0.15)"
+                )
             )
-        )
 
 
     # ============================================================
@@ -1374,24 +1384,25 @@ if mode == "Single crystal":
             f"S2 range = {S2min:.1f} - {S2_list[i]:.1f}°"
         ]
 
+        if add_dark_angle:
+            
+            # --------------------------------------------------------
+            # Dark angle
+            # --------------------------------------------------------
 
-        # --------------------------------------------------------
-        # Dark angle
-        # --------------------------------------------------------
+            for dark_x, dark_y in dark_regions_kf[i]:
 
-        for dark_x, dark_y in dark_regions_kf[i]:
+                x_data.append(dark_x)
+                y_data.append(dark_y)
 
-            x_data.append(dark_x)
-            y_data.append(dark_y)
+                name_data.append("Dark angle (kf side)")
 
-            name_data.append("Dark angle (kf side)")
+            for dark_x, dark_y in dark_regions_ki[i]:
+            
+                x_data.append(dark_x)
+                y_data.append(dark_y)
 
-        for dark_x, dark_y in dark_regions_ki[i]:
-        
-            x_data.append(dark_x)
-            y_data.append(dark_y)
-
-            name_data.append("Dark angle (ki side)")
+                name_data.append("Dark angle (ki side)")
 
         step = dict(
             method="update",
