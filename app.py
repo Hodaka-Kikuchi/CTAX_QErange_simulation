@@ -817,8 +817,7 @@ if mode == "Single crystal":
         # Crystal angle offset
         # ----------------------------------------
 
-        #s1_offset = (ref_s1 - theta_ref + 180.0 - phi_ref)
-        s1_offset = ( - theta_ref + 180.0 - phi_ref)
+        s1_offset = (ref_s1 - theta_ref + 180.0 - phi_ref)
 
         # --------------------------------------------------------
         # Q calculation with S1
@@ -910,10 +909,11 @@ if mode == "Single crystal":
                     offset = -offset
                     angle_from = -angle_from
                     angle_to = -angle_to
+                    ref_s1 = -ref_s1
 
                 # Actual s1 positions
-                s1_from = offset + angle_from - Q_offset
-                s1_to   = offset + angle_to - Q_offset
+                s1_from = offset + angle_from - Q_offset - ref_s1
+                s1_to   = offset + angle_to - Q_offset - ref_s1
 
                 # ====================================================
                 # kf side
