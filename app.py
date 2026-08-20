@@ -371,12 +371,40 @@ if mode == "Single crystal":
             8.0
         )
 
-        default_sense = instrument_data.get("sense", "-+-")
+        default_sense = instrument_data.get("sense", "-+-")# ============================================================
+        # Energy / Sense
+        # ============================================================
 
-        col0, col1, col2 = st.sidebar.columns([2, 2, 1])
+        col1, col2, col3, col4 = st.sidebar.columns([2, 2, 1.5, 1])
 
+        with col1:
 
-        with col0:
+            default_sense = instrument_data.get(
+                "sense",
+                "-+-"
+            )
+
+            sense_options = [
+                "+-+",
+                "-+-"
+            ]
+
+            default_sense_index = (
+                sense_options.index(default_sense)
+                if default_sense in sense_options
+                else 0
+            )
+
+            instrument_sense = st.radio(
+                "",
+                sense_options,
+                index=default_sense_index,
+                label_visibility="collapsed",
+                key=f"instrument_sense_{instrument}"
+            )
+
+        with col2:
+
             mode = st.radio(
                 "",
                 ["Ef fixed", "Ei fixed"],
@@ -388,17 +416,18 @@ if mode == "Single crystal":
                 key=f"energy_mode_{instrument}"
             )
 
+        with col3:
 
-        with col1:
             energy_input = st.number_input(
-                f"{'Ef' if mode=='Ef fixed' else 'Ei'} (meV)",
+                f"{'Ef' if mode == 'Ef fixed' else 'Ei'} (meV)",
                 value=float(default_energy),
                 step=0.5,
                 key=f"energy_{instrument}"
             )
 
 
-        with col2:
+        with col4:
+
             lambda_half = st.checkbox(
                 "λ/2",
                 value=False,
@@ -406,35 +435,59 @@ if mode == "Single crystal":
             )
 
 
+        # ============================================================
+        # S2 / S1 range
+        # ============================================================
+
+        col1, col2, col3 = st.sidebar.columns([1, 1, 1])
+
+        with col1:
+
+            S2min = st.number_input(
+                "S2 min (deg)",
+                value=float(default_S2min),
+                step=0.1,
+                key=f"S2min_{instrument}"
+            )
+
+
+        with col2:
+
+            S1min = st.number_input(
+                "S1 min (deg)",
+                value=-180.0,
+                step=0.1,
+                key=f"S1min_{instrument}"
+            )
+
+
+        with col3:
+
+            S1max = st.number_input(
+                "S1 max (deg)",
+                value=180.0,
+                step=0.1,
+                key=f"S1max_{instrument}"
+            )
+
+
+        # ============================================================
+        # Energy
+        # ============================================================
+
         if mode == "Ef fixed":
 
             if lambda_half:
                 Ef = 4 * energy_input
-
-                # 元データを直接変更しない方が安全
-                #data[:,1] = 4 * data[:,1]
-
             else:
                 Ef = energy_input
-
 
         else:
 
             if lambda_half:
                 Ei = 4 * energy_input
-
-                #data[:,1] = 4 * data[:,1]
-
             else:
                 Ei = energy_input
-
-
-        S2min = st.number_input(
-            "minimum 2θ (deg)",
-            value=float(default_S2min),
-            step=0.1,
-            key=f"S2min_{instrument}"
-        )
 
         st.header("Dark angle")
 
@@ -442,33 +495,13 @@ if mode == "Single crystal":
         # Reference & sense
         # ============================================================
 
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            dark_angle_reference = st.radio(
-                "Reference",
-                ["Reference Q", "Direct beam"],
-                horizontal=True,
-                index=0,
-                key="dark_angle_reference"
-            )
-
-        with col2:
-            sense_options = ["+-+", "-+-"]
-            
-            default_sense_index = (
-                sense_options.index(default_sense)
-                if default_sense in sense_options
-                else 0
-            )
-
-            instrument_sense = st.radio(
-                "Sense",
-                sense_options,
-                horizontal=True,
-                index=default_sense_index,
-                key=f"instrument_sense_{instrument}"
-            )
+        dark_angle_reference = st.radio(
+            "Reference",
+            ["Reference Q", "Direct beam"],
+            horizontal=True,
+            index=0,
+            key="dark_angle_reference"
+        )
 
         # ============================================================
         # Reference Q
@@ -576,119 +609,8 @@ if mode == "Single crystal":
 
         add_dark_angle = st.button("Add dark angle")
 
-    #----------------------------------------
-    # calculation range
-    #----------------------------------------
-
-    def Qvector(two_theta_deg, Ei):
-
-        ki = 0.6947*np.sqrt(Ei)
-        kf = 0.6947*np.sqrt(Ef)
-
-        tt = np.deg2rad(two_theta_deg)
-
-        qx = ki - kf*np.cos(tt)
-        qy = -kf*np.sin(tt)
-
-        return np.array([qx,qy])
-
-    def calc_Q_region(Ei, Ef, hw, S2min, S2interp_use):
-
-        S2max = float(S2interp_use(Ei))
-
-        qmin = Qvector(S2min, Ei)
-        qmax = Qvector(S2max, Ei)
-
-        phi=np.linspace(0,360,721)
-
-        xmin=[]
-        ymin=[]
-        xmax=[]
-        ymax=[]
-
-        for p in phi:
-
-            r=np.deg2rad(p)
-
-            R=np.array([
-                [np.cos(r),-np.sin(r)],
-                [np.sin(r), np.cos(r)]
-            ])
-
-            q=R@qmin
-            xmin.append(q[0])
-            ymin.append(q[1])
-
-            q=R@qmax
-            xmax.append(q[0])
-            ymax.append(q[1])
-
-        return (
-            np.array(xmin),
-            np.array(ymin),
-            np.array(xmax),
-            np.array(ymax),
-            S2max
-        )
-
-    #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
-    if lambda_half:
-
-        hw_list = np.array([0.0])
-
-    else:
-
-        if mode=='Ef fixed':
-
-            Ei_max = np.max(data[:,1])
-
-            hw_list=np.arange(
-                0,
-                Ei_max-Ef,
-                0.2
-            )
-
-        else:
-
-            hw_list=np.arange(
-                0,
-                Ei,
-                0.2
-            )
-
-    regions=[]
-    S2_list=[]
-    Qmax_list=[]
-
-    for hw in hw_list:
-        if mode=='Ef fixed':
-            Ei = Ef + hw
-        else:
-            Ef = Ei - hw
-
-        if lambda_half:
-            S2interp_use = S2interp_half
-        else:
-            S2interp_use = S2interp
-
-        result = calc_Q_region(
-            Ei,
-            Ef,
-            hw,
-            S2min,
-            S2interp_use
-        )
-        
-        regions.append(result[:4])
-        S2_list.append(result[4])
-
-        S2max = float(S2interp_use(Ei))
-
-        qmax = np.linalg.norm(
-                Qvector(S2max,Ei)
-            )
-        Qmax_list.append(qmax)
-
+    # basic calculation
+    
     #=========================
     # Crystal
     #=========================
@@ -715,40 +637,312 @@ if mode == "Single crystal":
     ey = v - np.dot(v,ex)*ex
     ey = ey/np.linalg.norm(ey)
 
-    #----------------------------------------
-    # rotate by sample angle
-    #----------------------------------------
+    # ----------------------------------------
+    # Calculate offset
+    # ----------------------------------------
 
-    phi = np.linspace(0,360,721)
+    # Reciprocal lattice vector of reference Bragg position
+    Q_ref = (ref_h * astar + ref_k * bstar + ref_l * cstar)
+    Q_ref_norm = np.linalg.norm(Q_ref)
+    if Q_ref_norm > 1e-10:
+        d_ref = 2.0 * np.pi / Q_ref_norm
+    else:
+        d_ref = None
 
-    xmin=[]
-    ymin=[]
+    # ----------------------------------------
+    # Q_ref angle in the (u, v) coordinate
+    # ----------------------------------------
 
-    xmax=[]
-    ymax=[]
+    if Q_ref_norm > 1e-10:
+        Q_ref_x = np.dot(Q_ref, ex)
+        Q_ref_y = np.dot(Q_ref, ey)
+        phi_ref = np.degrees(np.arctan2(Q_ref_y, Q_ref_x))
+    else:
+        Q_ref_x = 0.0
+        Q_ref_y = 0.0
+        phi_ref = 0.0
 
-    for p in phi:
-        r=np.deg2rad(p)
-        Qmin = Qvector(S2min, Ei)
-        Qmax = Qvector(S2max, Ei)
-        R=np.array([
-            [np.cos(r),-np.sin(r)],
-            [np.sin(r), np.cos(r)]
+    # ----------------------------------------
+    # Neutron wavelength
+    # ----------------------------------------
+
+    if mode == 'Ef fixed':
+        wavelength = 9.044 / np.sqrt(Ef)
+    else:
+        wavelength = 9.044 / np.sqrt(Ei)
+
+    # ----------------------------------------
+    # Bragg angle
+    # ----------------------------------------
+
+    if Q_ref_norm > 1e-10:
+        theta_ref = np.degrees(
+            np.arcsin(
+                wavelength / (2.0 * d_ref)
+            )
+        )
+    else:
+        theta_ref = 0.0
+
+    # ----------------------------------------
+    # angle between Q and kf, 0 deg means just block kf
+    # ----------------------------------------
+    if dark_angle_reference == "Reference Q":
+
+        Q_offset = 90 + theta_ref
+
+    else:
+
+        Q_offset = 2.0 * theta_ref
+
+    # ----------------------------------------
+    # Crystal angle offset
+    # ----------------------------------------
+
+    s1_offset = ( - theta_ref + 180.0 - phi_ref)
+
+    # --------------------------------------------------------
+    # Q calculation with S1
+    # --------------------------------------------------------
+
+    #calculation in case of s1 range
+    def calc_q0(s1, s2, ki, kf, s1_offset):
+    
+        ki_angle = np.deg2rad(
+            - s1 + s1_offset + ref_s1
+        )
+
+        kf_angle = np.deg2rad(
+            s2 - s1 + s1_offset + ref_s1
+        )
+
+        kix = ki * np.sin(ki_angle)
+        kiy = ki * np.cos(ki_angle)
+
+        kfx = kf * np.sin(kf_angle)
+        kfy = kf * np.cos(kf_angle)
+
+        qx = kix - kfx
+        qy = kiy - kfy
+
+        if Q_ref_norm > 1e-10:
+
+            eQ = np.array([
+                Q_ref_x,
+                Q_ref_y
+            ])
+
+            eQ /= np.linalg.norm(eQ)
+
+            q = np.array([qx, qy])
+
+            qx, qy = (
+                2.0 * np.dot(q, eQ) * eQ - q
+            )
+        
+        return qx, qy
+
+    # calculation in case of dark angle
+    def calc_q(s1, s2, ki, kf, s1_offset):
+
+        ki_angle = np.deg2rad(
+            -s1 + s1_offset
+        )
+
+        kf_angle = np.deg2rad(
+            s2 - s1 + s1_offset
+        )
+
+        kix = ki * np.sin(ki_angle)
+        kiy = ki * np.cos(ki_angle)
+
+        kfx = kf * np.sin(kf_angle)
+        kfy = kf * np.cos(kf_angle)
+
+        qx = kix - kfx
+        qy = kiy - kfy
+
+        if instrument_sense == "+-+":
+
+            # Reference Q direction
+            eQ = np.array([
+                Q_ref_x,
+                Q_ref_y
+            ])
+
+            eQ /= np.linalg.norm(eQ)
+
+            # Reflection with respect to Reference-Q axis
+            q = np.array([qx, qy])
+
+            qx, qy = (
+                2.0 * np.dot(q, eQ) * eQ - q
+            )
+
+        return qx, qy
+
+    #hw_list=np.arange(3.6-Ef,20.1-Ef,0.1)
+    if lambda_half:
+
+        hw_list = np.array([0.0])
+
+    else:
+
+        if mode=='Ef fixed':
+
+            Ei_max = np.max(data[:,1])
+
+            hw_list=np.arange(
+                0,
+                Ei_max-Ef,
+                0.2
+            )
+
+        else:
+
+            hw_list=np.arange(
+                0,
+                Ei,
+                0.2
+            )
+
+    # ============================================================
+    # Accessible Q region
+    # ============================================================
+
+    regions = []
+    S2_list = []
+    Qmax_list = []
+
+    for hw in hw_list:
+
+        # --------------------------------------------------------
+        # Energy for this hw
+        # --------------------------------------------------------
+
+        if mode == 'Ef fixed':
+            Ei_hw = Ef + hw
+            Ef_hw = Ef
+        else:
+            Ei_hw = Ei
+            Ef_hw = Ei - hw
+
+        ki_hw = 0.6947 * np.sqrt(Ei_hw)
+        kf_hw = 0.6947 * np.sqrt(Ef_hw)
+
+        # --------------------------------------------------------
+        # S2 limit
+        # --------------------------------------------------------
+
+        if lambda_half:
+            S2interp_use = S2interp_half
+        else:
+            S2interp_use = S2interp
+
+        S2max_hw = float(
+            S2interp_use(Ei_hw)
+        )
+
+        # --------------------------------------------------------
+        # S1 / S2 boundaries
+        # --------------------------------------------------------
+
+        s1_range = np.linspace(
+            S1min,
+            S1max,
+            200
+        )
+
+        s2_range = np.linspace(
+            S2min,
+            S2max_hw,
+            200
+        )
+
+        # ========================================================
+        # S2 = S2min
+        # ========================================================
+
+        q_s2min = np.array([
+            calc_q0(
+                s1,
+                S2min,
+                ki_hw,
+                kf_hw,
+                s1_offset
+            )
+            for s1 in s1_range
         ])
 
-        q=R@Qmin
-        xmin.append(q[0])
-        ymin.append(q[1])
+        # ========================================================
+        # S1 = S1max
+        # ========================================================
 
-        q=R@Qmax
-        xmax.append(q[0])
-        ymax.append(q[1])
+        q_s1max = np.array([
+            calc_q0(
+                S1max,
+                s2,
+                ki_hw,
+                kf_hw,
+                s1_offset
+            )
+            for s2 in s2_range
+        ])
 
-    xmin=np.array(xmin)
-    ymin=np.array(ymin)
+        # ========================================================
+        # S2 = S2max
+        # ========================================================
 
-    xmax=np.array(xmax)
-    ymax=np.array(ymax)
+        q_s2max = np.array([
+            calc_q0(
+                s1,
+                S2max_hw,
+                ki_hw,
+                kf_hw,
+                s1_offset
+            )
+            for s1 in s1_range[::-1]
+        ])
+
+        # ========================================================
+        # S1 = S1min
+        # ========================================================
+
+        q_s1min = np.array([
+            calc_q0(
+                S1min,
+                s2,
+                ki_hw,
+                kf_hw,
+                s1_offset
+            )
+            for s2 in s2_range[::-1]
+        ])
+
+        # ========================================================
+        # Closed accessible region
+        # ========================================================
+
+        q_boundary = np.concatenate([
+            q_s2min,
+            q_s1max,
+            q_s2max,
+            q_s1min
+        ])
+
+        regions.append(q_boundary)
+
+        S2_list.append(S2max_hw)
+
+        # Maximum |Q| for plotting
+        Qmax_list.append(
+            np.max(
+                np.linalg.norm(
+                    q_boundary,
+                    axis=1
+                )
+            )
+        )
 
     if add_dark_angle:
 
@@ -759,108 +953,6 @@ if mode == "Single crystal":
         dark_regions_kf = []
         dark_regions_ki = []
 
-        # ----------------------------------------
-        # Calculate offset
-        # ----------------------------------------
-
-        # Reciprocal lattice vector of reference Bragg position
-        Q_ref = (
-            ref_h * astar
-            + ref_k * bstar
-            + ref_l * cstar
-        )
-
-        d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
-
-        # ----------------------------------------
-        # Q_ref angle in the (u, v) coordinate
-        # ----------------------------------------
-
-        Q_ref_x = np.dot(Q_ref, ex)
-        Q_ref_y = np.dot(Q_ref, ey)
-
-        phi_ref = np.degrees(
-            np.arctan2(Q_ref_y, Q_ref_x)
-        )
-
-        # ----------------------------------------
-        # Neutron wavelength
-        # ----------------------------------------
-
-        if mode == 'Ef fixed':
-            wavelength = 9.044 / np.sqrt(Ef)
-        else:
-            wavelength = 9.044 / np.sqrt(Ei)
-
-        # ----------------------------------------
-        # Bragg angle
-        # ----------------------------------------
-
-        theta_ref = np.degrees(
-            np.arcsin(
-                wavelength / (2.0 * d_ref)
-            )
-        )
-
-        # ----------------------------------------
-        # angle between Q and kf, 0 deg means just block kf
-        # ----------------------------------------
-        if dark_angle_reference == "Reference Q":
-
-            Q_offset = 90 + theta_ref
-
-        else:
-
-            Q_offset = 2.0 * theta_ref
-
-        # ----------------------------------------
-        # Crystal angle offset
-        # ----------------------------------------
-
-        # s1_offset = (ref_s1 - theta_ref + 180.0 - phi_ref)
-        s1_offset = ( - theta_ref + 180.0 - phi_ref)
-
-        # --------------------------------------------------------
-        # Q calculation with S1
-        # --------------------------------------------------------
-
-        def calc_q(s1, s2, ki, kf, s1_offset):
-
-            ki_angle = np.deg2rad(
-                -s1 + s1_offset
-            )
-
-            kf_angle = np.deg2rad(
-                s2 - s1 + s1_offset
-            )
-
-            kix = ki * np.sin(ki_angle)
-            kiy = ki * np.cos(ki_angle)
-
-            kfx = kf * np.sin(kf_angle)
-            kfy = kf * np.cos(kf_angle)
-
-            qx = kix - kfx
-            qy = kiy - kfy
-
-            if instrument_sense == "+-+":
-
-                # Reference Q direction
-                eQ = np.array([
-                    Q_ref_x,
-                    Q_ref_y
-                ])
-
-                eQ /= np.linalg.norm(eQ)
-
-                # Reflection with respect to Reference-Q axis
-                q = np.array([qx, qy])
-
-                qx, qy = (
-                    2.0 * np.dot(q, eQ) * eQ - q
-                )
-
-            return qx, qy
 
         # --------------------------------------------------------
         # Calculate Dark angle for each hw
@@ -1169,7 +1261,7 @@ if mode == "Single crystal":
     # fill accessible region
     #----------------------------------------
 
-    Qmax = np.linalg.norm(Qvector(S2max, Ei))
+    Qmax = Qmax_list[0]
 
     U = (
         U_h*astar +
@@ -1190,7 +1282,8 @@ if mode == "Single crystal":
 
     fig=go.Figure()
 
-    xmin,ymin,xmax,ymax=regions[0]
+    #xmin,ymin,xmax,ymax=regions[0]
+    q_boundary = regions[0]
 
     Gx_points = []
     Gy_points = []
@@ -1258,8 +1351,8 @@ if mode == "Single crystal":
 
     fig.add_trace(
         go.Scatter(
-            x=np.concatenate([xmax,xmin[::-1]]),
-            y=np.concatenate([ymax,ymin[::-1]]),
+            x=q_boundary[:, 0],
+            y=q_boundary[:, 1],
             fill="toself",
             name="Accessible Q",
             line=dict(width=0),
@@ -1351,23 +1444,18 @@ if mode == "Single crystal":
 
     for i, hw in enumerate(hw_list):
 
-        xmin, ymin, xmax, ymax = regions[i]
+        #xmin, ymin, xmax, ymax = regions[i]
+        q_boundary = regions[i]
 
         x_data = [
-            np.concatenate([
-                xmax,
-                xmin[::-1]
-            ]),
+            q_boundary[:, 0],
             Gx_points,
             mag_x,
             [None]
         ]
 
         y_data = [
-            np.concatenate([
-                ymax,
-                ymin[::-1]
-            ]),
+            q_boundary[:, 1],
             Gy_points,
             mag_y,
             [None]
