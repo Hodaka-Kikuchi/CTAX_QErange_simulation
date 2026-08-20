@@ -72,6 +72,21 @@ instrument_files = sorted(
     ]
 )
 
+# sample folder
+
+SAMPLE_DIR = os.path.join(
+    BASE_DIR,
+    "sample"
+)
+
+sample_files = sorted(
+    [
+        f.replace(".json", "")
+        for f in os.listdir(SAMPLE_DIR)
+        if f.endswith(".json")
+    ]
+)
+
 # ==============================
 # UI
 # ==============================
@@ -115,6 +130,7 @@ st.title("TAS Q-E Range Simulator")
 
 display_names = {
     "CTAX": "CTAX@HFIR",
+    "HB1A": "HB-1A@HFIR",
     "HB1": "HB-1@HFIR",
     "HB3": "HB-3@HFIR",
     "HODACA": "HODACA/HER@JRR3",
@@ -489,6 +505,22 @@ if mode == "Single crystal":
             else:
                 Ei = energy_input
 
+        st.markdown("### Diffraction rings")
+
+        col_Al, col_Cu = st.columns(2)
+
+        with col_Al:
+            add_Al = st.checkbox(
+                "Al",
+                key="add_Al"
+            )
+
+        with col_Cu:
+            add_Cu = st.checkbox(
+                "Cu",
+                key="add_Cu"
+            )
+        
         st.header("Dark angle")
 
         # ============================================================
@@ -1347,7 +1379,95 @@ if mode == "Single crystal":
                     mag_label.append(
                         f"({hkl_mag[0]:.2f},{hkl_mag[1]:.2f},{hkl_mag[2]:.2f})"
                     )
-                    
+
+    # powder diffraction
+    sample_data = {}
+
+    for sample_name in ["Al", "Cu"]:
+
+        if sample_name not in sample_files:
+            continue
+
+        filepath = os.path.join(
+            SAMPLE_DIR,
+            f"{sample_name}.json"
+        )
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            sample_data[sample_name] = json.load(f)
+
+    Qmax = np.max(Qmax_list)
+
+    def make_diffraction_rings(sample_name,Qmax):
+
+        rings = []
+
+        if sample_name not in sample_data:
+            return rings
+
+        peaks = sample_data[sample_name]["peaks"]
+
+        for peak in peaks:
+
+            h = peak["h"]
+            k = peak["k"]
+            l = peak["l"]
+
+            intensity = peak["intensity"]
+            d = peak["d"]
+
+            # ----------------------------------------
+            # Q magnitude
+            # ----------------------------------------
+
+            Q = 2.0 * np.pi / d
+
+            # Qmaxより外側なら表示しない
+            if Q > Qmax:
+                continue
+
+            # ----------------------------------------
+            # Ring
+            # ----------------------------------------
+
+            phi = np.linspace(
+                0.0,
+                2.0 * np.pi,
+                721
+            )
+
+            ring_x = Q * np.cos(phi)
+            ring_y = Q * np.sin(phi)
+
+            rings.append(
+                {
+                    "h": h,
+                    "k": k,
+                    "l": l,
+                    "Q": Q,
+                    "intensity": intensity,
+                    "x": ring_x,
+                    "y": ring_y
+                }
+            )
+
+        return rings
+
+    def diffraction_color(intensity,max_intensity):
+
+        if max_intensity <= 0:
+            alpha = 0.15
+
+        else:
+            ratio = intensity / max_intensity
+
+            alpha = (0.15 + 0.70 * ratio)
+
+        return (
+            f"rgba(0, 0, 255, {alpha:.3f})"
+        )
+
+    # show graph
 
     fig.add_trace(
         go.Scatter(
@@ -1403,6 +1523,116 @@ if mode == "Single crystal":
         )
     )
 
+    # ============================================================
+    # Diffraction rings
+    # ============================================================
+
+    selected_samples = []
+
+    if add_Al:
+        selected_samples.append("Al")
+
+    if add_Cu:
+        selected_samples.append("Cu")
+
+    # ------------------------------------------------------------
+    # 全ringを先に取得
+    #
+    # Qmaxに関係なく全ピークをtraceとして登録しておく。
+    # Qmaxより外側のものはslider側で [None] にして非表示にする。
+    # ------------------------------------------------------------
+
+    diffraction_ring_data = []
+
+    for sample_name in selected_samples:
+
+        if sample_name not in sample_data:
+            continue
+
+        peaks = sample_data[sample_name]["peaks"]
+
+        # このsample内の最大強度
+        max_intensity = max(
+            peak["intensity"]
+            for peak in peaks
+        )
+
+        for peak in peaks:
+
+            Q = 2.0 * np.pi / peak["d"]
+
+            phi = np.linspace(
+                0.0,
+                2.0 * np.pi,
+                721
+            )
+
+            ring_x = Q * np.cos(phi)
+            ring_y = Q * np.sin(phi)
+
+            diffraction_ring_data.append(
+                {
+                    "sample": sample_name,
+                    "h": peak["h"],
+                    "k": peak["k"],
+                    "l": peak["l"],
+                    "Q": Q,
+                    "intensity": peak["intensity"],
+                    "max_intensity": max_intensity,
+                    "x": ring_x,
+                    "y": ring_y
+                }
+            )
+
+    # ============================================================
+    # Diffraction ring traces
+    # ============================================================
+
+    Qmax_0 = Qmax_list[0]
+
+    for ring in diffraction_ring_data:
+
+        if ring["Q"] <= Qmax_0:
+
+            ring_x = ring["x"]
+            ring_y = ring["y"]
+
+        else:
+
+            ring_x = [None]
+            ring_y = [None]
+
+        ring_color = diffraction_color(
+            ring["intensity"],
+            ring["max_intensity"]
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=ring_x,
+                y=ring_y,
+                mode="lines",
+                showlegend=False,
+                name=(
+                    f"{ring['sample']} "
+                    f"({ring['h']}{ring['k']}{ring['l']})"
+                ),
+                line=dict(
+                    color=ring_color,
+                    width=3
+                ),
+                hovertemplate=(
+                    f"{ring['sample']} "
+                    f"({ring['h']}{ring['k']}{ring['l']})"
+                    "<br>"
+                    f"Q = {ring['Q']:.3f} Å⁻¹"
+                    "<br>"
+                    f"I = {ring['intensity']:.1f}"
+                    "<extra></extra>"
+                )
+            )
+        )
+
     if add_dark_angle:
 
         # ============================================================
@@ -1435,7 +1665,6 @@ if mode == "Single crystal":
                 )
             )
 
-
     # ============================================================
     # Slider
     # ============================================================
@@ -1444,7 +1673,6 @@ if mode == "Single crystal":
 
     for i, hw in enumerate(hw_list):
 
-        #xmin, ymin, xmax, ymax = regions[i]
         q_boundary = regions[i]
 
         x_data = [
@@ -1468,25 +1696,70 @@ if mode == "Single crystal":
             f"S2 range = {S2min:.1f} - {S2_list[i]:.1f}°"
         ]
 
+        # ============================================================
+        # Diffraction rings
+        # ============================================================
+
+        Qmax_hw = Qmax_list[i]
+
+        for ring in diffraction_ring_data:
+
+            # --------------------------------------------------------
+            # Qmax以内なら表示
+            # --------------------------------------------------------
+
+            if ring["Q"] <= Qmax_hw:
+
+                x_data.append(
+                    ring["x"]
+                )
+
+                y_data.append(
+                    ring["y"]
+                )
+
+            # --------------------------------------------------------
+            # Qmaxより外側なら非表示
+            # --------------------------------------------------------
+
+            else:
+
+                x_data.append(
+                    [None]
+                )
+
+                y_data.append(
+                    [None]
+                )
+
+            name_data.append(
+                f"{ring['sample']} "
+                f"({ring['h']}{ring['k']}{ring['l']})"
+            )
+
+        # ============================================================
+        # Dark angle
+        # ============================================================
+
         if add_dark_angle:
-            
-            # --------------------------------------------------------
-            # Dark angle
-            # --------------------------------------------------------
 
             for dark_x, dark_y in dark_regions_kf[i]:
 
                 x_data.append(dark_x)
                 y_data.append(dark_y)
 
-                name_data.append("Dark angle (kf side)")
+                name_data.append(
+                    "Dark angle (kf side)"
+                )
 
             for dark_x, dark_y in dark_regions_ki[i]:
-            
+
                 x_data.append(dark_x)
                 y_data.append(dark_y)
 
-                name_data.append("Dark angle (ki side)")
+                name_data.append(
+                    "Dark angle (ki side)"
+                )
 
         step = dict(
             method="update",
@@ -2045,7 +2318,7 @@ else:
     hw = hw[idx]
     Q_min = Q_min[idx]
     Q_max = Q_max[idx]
-
+    
     fig = go.Figure()
 
     for n in range(1,20):
