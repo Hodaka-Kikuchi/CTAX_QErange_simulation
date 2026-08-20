@@ -3,6 +3,8 @@
 
     "energy_mode": "Ei fixed",
 
+    "sense": "-+-",
+
     "default_energy": 13.9,
 
     "S2_min": 30.0,

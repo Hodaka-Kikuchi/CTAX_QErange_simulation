@@ -371,6 +371,7 @@ if mode == "Single crystal":
             8.0
         )
 
+        default_sense = instrument_data.get("sense", "-+-")
 
         col0, col1, col2 = st.sidebar.columns([2, 2, 1])
 
@@ -437,8 +438,44 @@ if mode == "Single crystal":
 
         st.header("Dark angle")
 
-        # Reference (h, k, l)
-        st.markdown("**Bragg position**")
+        # ============================================================
+        # Reference & sense
+        # ============================================================
+
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            dark_angle_reference = st.radio(
+                "Reference",
+                ["Reference Q", "Direct beam"],
+                horizontal=True,
+                index=0,
+                key="dark_angle_reference"
+            )
+
+        with col2:
+            sense_options = ["+-+", "-+-"]
+            
+            default_sense_index = (
+                sense_options.index(default_sense)
+                if default_sense in sense_options
+                else 0
+            )
+
+            instrument_sense = st.radio(
+                "Sense",
+                sense_options,
+                horizontal=True,
+                index=default_sense_index,
+                key=f"instrument_sense_{instrument}"
+            )
+
+        # ============================================================
+        # Reference Q
+        # ============================================================
+
+        st.markdown("**Reference Q**")
+
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -473,9 +510,12 @@ if mode == "Single crystal":
                 key="ref_s1"
             )
 
-        st.markdown("**s1 range**")
+        # ============================================================
+        # Dark angle range
+        # ============================================================
 
-        # Header
+        st.markdown("**Range**")
+
         col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
 
         with col0:
@@ -489,7 +529,6 @@ if mode == "Single crystal":
 
         with col3:
             st.markdown("**Offset (deg)**")
-
 
         dark_angle_ranges = []
 
@@ -725,7 +764,6 @@ if mode == "Single crystal":
 
     d_ref = 2.0 * np.pi / np.linalg.norm(Q_ref)
 
-
     # ----------------------------------------
     # Q_ref angle in the (u, v) coordinate
     # ----------------------------------------
@@ -737,7 +775,6 @@ if mode == "Single crystal":
         np.arctan2(Q_ref_y, Q_ref_x)
     )
 
-
     # ----------------------------------------
     # Neutron wavelength
     # ----------------------------------------
@@ -746,7 +783,6 @@ if mode == "Single crystal":
         wavelength = 9.044 / np.sqrt(Ef)
     else:
         wavelength = 9.044 / np.sqrt(Ei)
-
 
     # ----------------------------------------
     # Bragg angle
@@ -758,6 +794,16 @@ if mode == "Single crystal":
         )
     )
 
+    # ----------------------------------------
+    # angle between Q and kf, 0 deg means just block kf
+    # ----------------------------------------
+    if dark_angle_reference == "Reference Q":
+
+        Q_offset = 90 + theta_ref
+
+    else:
+
+        Q_offset = 2.0 * theta_ref
 
     # ----------------------------------------
     # Crystal angle offset
@@ -793,8 +839,24 @@ if mode == "Single crystal":
         qx = kix - kfx
         qy = kiy - kfy
 
-        return qx, qy
+        if instrument_sense == "+-+":
 
+            # Reference Q direction
+            eQ = np.array([
+                Q_ref_x,
+                Q_ref_y
+            ])
+
+            eQ /= np.linalg.norm(eQ)
+
+            # Reflection with respect to Reference-Q axis
+            q = np.array([qx, qy])
+
+            qx, qy = (
+                2.0 * np.dot(q, eQ) * eQ - q
+            )
+
+        return qx, qy
 
     # --------------------------------------------------------
     # Calculate Dark angle for each hw
@@ -823,7 +885,6 @@ if mode == "Single crystal":
             200
         )
 
-
         # ========================================================
         # Dark angle regions for this hw
         # ========================================================
@@ -841,10 +902,14 @@ if mode == "Single crystal":
             if angle_from == 0 and angle_to == 0:
                 continue
 
-            # Actual s1 positions
-            s1_from = offset + angle_from
-            s1_to   = offset + angle_to
+            if instrument_sense == "+-+":
+                offset = -offset
+                angle_from = -angle_from
+                angle_to = -angle_to
 
+            # Actual s1 positions
+            s1_from = offset + angle_from - Q_offset
+            s1_to   = offset + angle_to - Q_offset
 
             # ====================================================
             # kf side
@@ -866,7 +931,6 @@ if mode == "Single crystal":
 
                 dark_x_from.append(qx)
                 dark_y_from.append(qy)
-
 
             # S1 = To
             dark_x_to = []
@@ -891,7 +955,6 @@ if mode == "Single crystal":
 
             dark_x_to = np.array(dark_x_to)
             dark_y_to = np.array(dark_y_to)
-
 
             # ====================================================
             # ki side
@@ -1419,10 +1482,220 @@ if mode == "Single crystal":
         height=700
     )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    col_main, col_geometry = st.columns([3, 1])
+
+    with col_main:
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+    with col_geometry:
+
+        # ============================================================
+        # Top view of Dark angle geometry
+        # ============================================================
+
+        fig_geometry = go.Figure()
+
+        # ------------------------------------------------------------
+        # Q direction
+        #
+        # Q starts from (0, -1) and points to (0, 1)
+        # ------------------------------------------------------------
+
+        q_start_x = 0.0
+        q_start_y = -0.2
+
+        q_end_x = 0.0
+        q_end_y = 2.0
+
+        fig_geometry.add_annotation(
+            x=q_end_x,
+            y=q_end_y,
+            ax=q_start_x,
+            ay=q_start_y,
+            xref="x",
+            yref="y",
+            axref="x",
+            ayref="y",
+            showarrow=True,
+            arrowhead=3,
+            arrowsize=1.5,
+            arrowwidth=3,
+            arrowcolor="red"
+        )
+
+        # Q label
+        fig_geometry.add_annotation(
+            x=0.8,
+            y=0.8,
+            text="Reference Q" if dark_angle_reference == "Reference Q" else "ki",
+            showarrow=False,
+            font=dict(
+                size=16,
+                color="red"
+            )
+        )
+
+        # ------------------------------------------------------------
+        # Dark angle circle
+        #
+        # Center = starting point of Q
+        # Radius  = same length as Q arrow
+        # ------------------------------------------------------------
+
+        center_x = 0.0
+        center_y = 0.0
+
+        dark_radius = 2.0
+
+        circle_theta = np.linspace(
+            0,
+            2 * np.pi,
+            360
+        )
+
+        circle_x = (
+            center_x
+            + dark_radius * np.cos(circle_theta)
+        )
+
+        circle_y = (
+            center_y
+            + dark_radius * np.sin(circle_theta)
+        )
+
+        fig_geometry.add_trace(
+            go.Scatter(
+                x=circle_x,
+                y=circle_y,
+                mode="lines",
+                line=dict(
+                    color="gray",
+                    width=1
+                ),
+                showlegend=False,
+                hoverinfo="skip"
+            )
+        )
+
+        # ------------------------------------------------------------
+        # Dark angle arcs
+        # ------------------------------------------------------------
+
+        for i, (angle_from, angle_to, offset) in enumerate(
+            dark_angle_ranges
+        ):
+
+            # Ignore unused range
+            if angle_from == 0 and angle_to == 0:
+                continue
+
+            # --------------------------------------------------------
+            # Flip offset for instrument sense
+            # --------------------------------------------------------
+
+            #if instrument_sense == "+-+":
+            #    offset = -offset
+
+            # --------------------------------------------------------
+            # Angle definition
+            #
+            # 0 deg  = Q direction
+            # + angle = counter-clockwise
+            # - angle = clockwise
+            # --------------------------------------------------------
+
+            angle_start = offset + angle_from
+            angle_end = offset + angle_to
+
+            if angle_end < angle_start:
+                angle_end += 360.0
+
+            angles = np.linspace(
+                angle_start,
+                angle_end,
+                200
+            )
+
+            theta = np.deg2rad(angles)
+
+            # 0 deg = upward
+            # Positive = counter-clockwise
+            arc_x = (
+                center_x
+                - dark_radius * np.sin(theta)
+            )
+
+            arc_y = (
+                center_y
+                + dark_radius * np.cos(theta)
+            )
+
+            fig_geometry.add_trace(
+                go.Scatter(
+                    x=arc_x,
+                    y=arc_y,
+                    mode="lines",
+                    line=dict(
+                        color="black",
+                        width=6
+                    ),
+                    name=f"Range {i + 1}",
+                    showlegend=False,
+                    hoverinfo="skip"
+                )
+            )
+
+        # ------------------------------------------------------------
+        # Layout
+        # ------------------------------------------------------------
+
+        fig_geometry.update_layout(
+
+            title=dict(
+                text="Dark angle (elastic, top view)",
+                x=0.5,
+                xanchor="center"
+            ),
+
+            xaxis=dict(
+                range=[-2.3, 2.3],
+                showgrid=False,
+                zeroline=False,
+                showticklabels=False
+            ),
+
+            yaxis=dict(
+                range=[-2.3, 2.3],
+                showgrid=False,
+                zeroline=False,
+                showticklabels=False,
+                scaleanchor="x",
+                scaleratio=1
+            ),
+
+            width=350,
+            height=700,
+
+            margin=dict(
+                l=10,
+                r=10,
+                t=50,
+                b=10
+            ),
+
+            showlegend=False
+        )
+
+        st.plotly_chart(
+            fig_geometry,
+            use_container_width=True,
+            config={
+                "displayModeBar": False
+            }
+        )
 
 ###############################################################################################################################
 

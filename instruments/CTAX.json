@@ -3,6 +3,8 @@
 
     "energy_mode": "Ef fixed",
 
+    "sense": "-+-",
+
     "default_energy": 4.8,
 
     "S2_min": 8.0,
