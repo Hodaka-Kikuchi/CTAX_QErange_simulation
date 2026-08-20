@@ -1524,7 +1524,7 @@ if mode == "Single crystal":
     )
 
     # ============================================================
-    # Diffraction rings
+    # Powder diffraction rings
     # ============================================================
 
     selected_samples = []
@@ -1535,12 +1535,8 @@ if mode == "Single crystal":
     if add_Cu:
         selected_samples.append("Cu")
 
-    # ------------------------------------------------------------
-    # 全ringを先に取得
-    #
-    # Qmaxに関係なく全ピークをtraceとして登録しておく。
-    # Qmaxより外側のものはslider側で [None] にして非表示にする。
-    # ------------------------------------------------------------
+    # 全hwで到達可能な最大Q
+    Qmax_diffraction = max(Qmax_list)
 
     diffraction_ring_data = []
 
@@ -1551,7 +1547,6 @@ if mode == "Single crystal":
 
         peaks = sample_data[sample_name]["peaks"]
 
-        # このsample内の最大強度
         max_intensity = max(
             peak["intensity"]
             for peak in peaks
@@ -1561,10 +1556,14 @@ if mode == "Single crystal":
 
             Q = 2.0 * np.pi / peak["d"]
 
+            # Qmaxより外側のリングは作らない
+            if Q > Qmax_diffraction:
+                continue
+
             phi = np.linspace(
                 0.0,
                 2.0 * np.pi,
-                721
+                361
             )
 
             ring_x = Q * np.cos(phi)
@@ -1584,39 +1583,28 @@ if mode == "Single crystal":
                 }
             )
 
-    # ============================================================
-    # Diffraction ring traces
-    # ============================================================
+    diffraction_trace_indices = []
 
-    Qmax_0 = Qmax_list[0]
+    # ============================================================
+    # Powder diffraction rings
+    # ============================================================
 
     for ring in diffraction_ring_data:
-
-        if ring["Q"] <= Qmax_0:
-
-            ring_x = ring["x"]
-            ring_y = ring["y"]
-
-        else:
-
-            ring_x = [None]
-            ring_y = [None]
 
         ring_color = diffraction_color(
             ring["intensity"],
             ring["max_intensity"]
         )
 
+        # このtraceが何番目かを記録
+        trace_index = len(fig.data)
+
         fig.add_trace(
             go.Scatter(
-                x=ring_x,
-                y=ring_y,
+                x=ring["x"],
+                y=ring["y"],
                 mode="lines",
                 showlegend=False,
-                name=(
-                    f"{ring['sample']} "
-                    f"({ring['h']}{ring['k']}{ring['l']})"
-                ),
                 line=dict(
                     color=ring_color,
                     width=3
@@ -1632,6 +1620,8 @@ if mode == "Single crystal":
                 )
             )
         )
+
+        diffraction_trace_indices.append(trace_index)
 
     if add_dark_angle:
 
@@ -1697,47 +1687,6 @@ if mode == "Single crystal":
         ]
 
         # ============================================================
-        # Diffraction rings
-        # ============================================================
-
-        Qmax_hw = Qmax_list[i]
-
-        for ring in diffraction_ring_data:
-
-            # --------------------------------------------------------
-            # Qmax以内なら表示
-            # --------------------------------------------------------
-
-            if ring["Q"] <= Qmax_hw:
-
-                x_data.append(
-                    ring["x"]
-                )
-
-                y_data.append(
-                    ring["y"]
-                )
-
-            # --------------------------------------------------------
-            # Qmaxより外側なら非表示
-            # --------------------------------------------------------
-
-            else:
-
-                x_data.append(
-                    [None]
-                )
-
-                y_data.append(
-                    [None]
-                )
-
-            name_data.append(
-                f"{ring['sample']} "
-                f"({ring['h']}{ring['k']}{ring['l']})"
-            )
-
-        # ============================================================
         # Dark angle
         # ============================================================
 
@@ -1760,6 +1709,12 @@ if mode == "Single crystal":
                 name_data.append(
                     "Dark angle (ki side)"
                 )
+        # Powder diffraction rings はsliderから除外
+        all_trace_indices = list(range(len(fig.data)))
+        slider_trace_indices = [
+            i for i in all_trace_indices
+            if i not in diffraction_trace_indices
+        ]
 
         step = dict(
             method="update",
@@ -1768,7 +1723,9 @@ if mode == "Single crystal":
                     "x": x_data,
                     "y": y_data,
                     "name": name_data
-                }
+                },
+                {},
+                slider_trace_indices
             ],
             label=f"{hw:.1f} meV"
         )
