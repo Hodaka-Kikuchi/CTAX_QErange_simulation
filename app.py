@@ -912,8 +912,8 @@ if mode == "Single crystal":
                     ref_s1 = -ref_s1
 
                 # Actual s1 positions
-                s1_from = offset + angle_from - Q_offset - ref_s1
-                s1_to   = offset + angle_to - Q_offset - ref_s1
+                s1_from = offset + angle_from - Q_offset + ref_s1
+                s1_to   = offset + angle_to - Q_offset + ref_s1
 
                 # ====================================================
                 # kf side
