@@ -571,18 +571,6 @@ if mode == "Single crystal":
         
         st.header("Dark angle")
 
-        # ============================================================
-        # Reference & sense
-        # ============================================================
-
-        dark_angle_reference = st.radio(
-            "Reference",
-            ["Reference Q", "Direct beam"],
-            horizontal=True,
-            index=0,
-            key="dark_angle_reference"
-        )
-
         # --------------------------------------------------------
         # Sample Environment
         # --------------------------------------------------------
@@ -622,34 +610,64 @@ if mode == "Single crystal":
         # Sample environment selection
         # ============================================================
 
+        # 表示名 → ファイル名 の対応表
+        se_display_to_file = {
+            "None": None
+        }
+
+        for se_name in se_files:
+
+            display_name = se_data[se_name].get(
+                "name",
+                se_name
+            )
+
+            se_display_to_file[display_name] = se_name
+
+
+        se_options = list(se_display_to_file.keys())
+
+        selected_se_display = st.selectbox(
+            "Sample environment",
+            se_options,
+            key="selected_se"
+        )
+
+        # 実際に使用するファイル名
+        selected_se = se_display_to_file[selected_se_display]
+
         se1, se2 = st.columns(2)
 
         with se1:
-            # 表示名 → ファイル名 の対応表
-            se_display_to_file = {
-                "None": None
-            }
+            # ============================================================
+            # Reference
+            # ============================================================
 
-            for se_name in se_files:
+            if selected_se == "None":
 
-                display_name = se_data[se_name].get(
-                    "name",
-                    se_name
+                default_reference = "Reference Q"
+
+            else:
+
+                default_reference = se_data[selected_se].get(
+                    "dark_angle_reference",
+                    "Reference Q"
                 )
 
-                se_display_to_file[display_name] = se_name
+
+            # SEを変更したときだけJSONの設定を反映
+            if st.session_state.get("last_selected_se") != selected_se:
+
+                st.session_state["dark_angle_reference"] = default_reference
+                st.session_state["last_selected_se"] = selected_se
 
 
-            se_options = list(se_display_to_file.keys())
-
-            selected_se_display = st.selectbox(
-                "Sample environment",
-                se_options,
-                key="selected_se"
+            dark_angle_reference = st.radio(
+                "Reference",
+                ["Reference Q", "Direct beam"],
+                horizontal=True,
+                key="dark_angle_reference"
             )
-
-            # 実際に使用するファイル名
-            selected_se = se_display_to_file[selected_se_display]
 
         with se2:
             rotation = st.number_input("Rotation (deg)",value=0.0,step=1.0,key=f"rotation")
