@@ -55,10 +55,9 @@ def reciprocal_vectors(a,b,c,alpha,beta,gamma):
 #----------------------------------------
 
 # Instrument folder
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+BASE_DIR = os.path.dirname( os.path.abspath(__file__) )
 
+# Instrument folder
 INSTRUMENT_DIR = os.path.join(
     BASE_DIR,
     "instruments"
@@ -66,11 +65,28 @@ INSTRUMENT_DIR = os.path.join(
 
 instrument_files = sorted(
     [
-        f.replace(".json","")
+        f.replace(".json", "")
         for f in os.listdir(INSTRUMENT_DIR)
         if f.endswith(".json")
     ]
 )
+
+instrument_data = {}
+
+for instrument_name in instrument_files:
+
+    filepath = os.path.join(
+        INSTRUMENT_DIR,
+        f"{instrument_name}.json"
+    )
+
+    with open(
+        filepath,
+        "r",
+        encoding="utf-8"
+    ) as f:
+
+        instrument_data[instrument_name] = json.load(f)
 
 # sample folder
 
@@ -128,16 +144,6 @@ st.set_page_config(
 
 st.title("TAS Q-E Range Simulator")
 
-display_names = {
-    "CTAX": "CTAX@HFIR",
-    "HB1A": "HB-1A@HFIR",
-    "HB1": "HB-1@HFIR",
-    "HB3": "HB-3@HFIR",
-    "HODACA": "HODACA/HER@JRR3",
-    "PoplarL": "Poplar(Larmor)@HFIR",
-    "PoplarS": "Poplar(Standard)@HFIR"
-}
-
 with st.sidebar:
 
     col1, col2 = st.columns([1,1])
@@ -147,7 +153,7 @@ with st.sidebar:
         instrument = st.selectbox(
             "Instrument",
             instrument_files,
-            format_func=lambda x: display_names.get(x, x)
+            format_func=lambda x: instrument_data[x]["name"]
         )
 
     with col2:
@@ -577,6 +583,71 @@ if mode == "Single crystal":
             key="dark_angle_reference"
         )
 
+        # --------------------------------------------------------
+        # Sample Environment
+        # --------------------------------------------------------
+
+        SE_DIR = os.path.join(
+            BASE_DIR,
+            "sample_environments"
+        )
+
+        se_files = sorted(
+            [
+                f.replace(".json", "")
+                for f in os.listdir(SE_DIR)
+                if f.endswith(".json")
+            ]
+        )
+
+        se_data = {}
+
+        for se_name in se_files:
+
+            filepath = os.path.join(
+                SE_DIR,
+                f"{se_name}.json"
+            )
+
+            with open(
+                filepath,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                se_data[se_name] = json.load(f)
+
+
+        # ============================================================
+        # Sample environment selection
+        # ============================================================
+
+        # 表示名 → ファイル名 の対応表
+        se_display_to_file = {
+            "None": None
+        }
+
+        for se_name in se_files:
+
+            display_name = se_data[se_name].get(
+                "name",
+                se_name
+            )
+
+            se_display_to_file[display_name] = se_name
+
+
+        se_options = list(se_display_to_file.keys())
+
+        selected_se_display = st.selectbox(
+            "Sample environment",
+            se_options,
+            key="selected_se"
+        )
+
+        # 実際に使用するファイル名
+        selected_se = se_display_to_file[selected_se_display]
+
         # ============================================================
         # Dark angle range
         # ============================================================
@@ -599,43 +670,95 @@ if mode == "Single crystal":
 
         dark_angle_ranges = []
 
-        for i in range(4):
+        if selected_se != "None":
+            se_ranges = se_data[selected_se]["dark_angle_ranges"]
 
+        else:
+            se_ranges = []
+
+        dark_angle_ranges = []
+
+        for i in range(4):
             col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
 
+            # --------------------------------------------
+            # Preset value
+            # --------------------------------------------
+
+            if i < len(se_ranges):
+
+                default_from = float(
+                    se_ranges[i]["from"]
+                )
+
+                default_to = float(
+                    se_ranges[i]["to"]
+                )
+
+                default_offset = float(
+                    se_ranges[i]["offset"]
+                )
+
+            else:
+
+                default_from = 0.0
+                default_to = 0.0
+                default_offset = 0.0
+
+            # --------------------------------------------
+            # Number
+            # --------------------------------------------
+
             with col0:
-                st.markdown(f"**{i + 1}**")
+
+                st.markdown(
+                    f"**{i + 1}**"
+                )
 
             with col1:
+
                 angle_from = st.number_input(
                     "From (deg)",
-                    value=0.0,
+                    value=default_from,
                     step=1.0,
-                    key=f"dark_from_{i}",
+                    key=f"dark_from_{i}_{selected_se}",
                     label_visibility="collapsed"
                 )
 
             with col2:
+
                 angle_to = st.number_input(
                     "To (deg)",
-                    value=0.0,
+                    value=default_to,
                     step=1.0,
-                    key=f"dark_to_{i}",
+                    key=f"dark_to_{i}_{selected_se}",
                     label_visibility="collapsed"
                 )
 
             with col3:
+
                 offset = st.number_input(
                     "Offset (deg)",
-                    value=0.0,
+                    value=default_offset,
                     step=1.0,
-                    key=f"dark_offset_{i}",
+                    key=f"dark_offset_{i}_{selected_se}",
                     label_visibility="collapsed"
                 )
 
             dark_angle_ranges.append(
-                (angle_from, angle_to, offset)
+                (
+                    angle_from,
+                    angle_to,
+                    offset
+                )
             )
+
+        rotation = st.number_input(
+            "Rotation (deg)",
+            value=0.0,
+            step=1.0,
+            key=f"rotation"
+        )
 
         # --------------------------------------------------------
         # Add dark angle
@@ -1036,10 +1159,11 @@ if mode == "Single crystal":
                     offset = -offset
                     angle_from = -angle_from
                     angle_to = -angle_to
+                    rotation = -rotation
 
                 # Actual s1 positions
-                s1_from = offset + angle_from - Q_offset
-                s1_to   = offset + angle_to - Q_offset
+                s1_from = offset + angle_from - Q_offset + rotation
+                s1_to   = offset + angle_to - Q_offset + rotation
 
                 # ====================================================
                 # kf side
@@ -1934,8 +2058,8 @@ if mode == "Single crystal":
             # - angle = clockwise
             # --------------------------------------------------------
 
-            angle_start = offset + angle_from
-            angle_end = offset + angle_to
+            angle_start = offset + rotation + angle_from
+            angle_end = offset + rotation + angle_to
 
             if angle_end < angle_start:
                 angle_end += 360.0

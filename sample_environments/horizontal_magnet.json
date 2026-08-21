@@ -1,0 +1,15 @@
+{
+  "name": "Horizontal Magnet",
+  "dark_angle_ranges": [
+    {
+      "from": -45,
+      "to": 45,
+      "offset": 0
+    },
+    {
+      "from": -45,
+      "to": 45,
+      "offset": 180
+    }
+  ]
+}
