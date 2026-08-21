@@ -652,21 +652,21 @@ if mode == "Single crystal":
         # Dark angle range
         # ============================================================
 
-        st.markdown("**Position & Range**")
+        st.markdown("Position & Range")
 
         col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
 
         with col0:
-            st.markdown("**No.**")
+            st.markdown("No.")
 
         with col1:
-            st.markdown("**From (deg)**")
+            st.markdown("From (deg)")
 
         with col2:
-            st.markdown("**To (deg)**")
+            st.markdown("To (deg)")
 
         with col3:
-            st.markdown("**Offset (deg)**")
+            st.markdown("Offset (deg)")
 
         dark_angle_ranges = []
 
