@@ -604,8 +604,7 @@ if mode == "Single crystal":
             ) as f:
 
                 se_data[se_name] = json.load(f)
-
-
+                
         # ============================================================
         # Sample environment selection
         # ============================================================
