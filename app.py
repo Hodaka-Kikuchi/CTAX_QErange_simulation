@@ -478,7 +478,8 @@ if mode == "Single crystal":
             energy_input = st.number_input(
                 f"{'Ef' if mode == 'Ef fixed' else 'Ei'} (meV)",
                 value=float(default_energy),
-                step=0.5,
+                step=0.1,
+                format="%.3f",
                 key=f"energy_{instrument}"
             )
 
@@ -2149,6 +2150,7 @@ else:
                 f"{'Ef' if mode=='Ef fixed' else 'Ei'} (meV)",
                 value=float(default_energy),
                 step=0.1,
+                format="%.3f",
                 key=f"powder_energy_{instrument}"
             )
 
