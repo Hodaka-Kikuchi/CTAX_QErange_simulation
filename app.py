@@ -370,6 +370,47 @@ if mode == "Single crystal":
         #st.write(instrument)
         #st.write(instrument_data)
 
+        # ============================================================
+        # Reference Q
+        # ============================================================
+
+        st.markdown("**Reference Q**")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            ref_h = st.number_input(
+                "h",
+                value=0.0,
+                step=0.1,
+                key="ref_h"
+            )
+
+        with col2:
+            ref_k = st.number_input(
+                "k",
+                value=0.0,
+                step=0.1,
+                key="ref_k"
+            )
+
+        with col3:
+            ref_l = st.number_input(
+                "l",
+                value=0.0,
+                step=0.1,
+                key="ref_l"
+            )
+
+        with col4:
+            ref_s1 = st.number_input(
+                "s1 (deg)",
+                value=0.0,
+                step=0.1,
+                key="ref_s1"
+            )
+
+
         st.header("Configuration")
 
         default_mode = instrument_data.get(
@@ -536,50 +577,10 @@ if mode == "Single crystal":
         )
 
         # ============================================================
-        # Reference Q
-        # ============================================================
-
-        st.markdown("**Reference Q**")
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            ref_h = st.number_input(
-                "h",
-                value=0.0,
-                step=0.1,
-                key="ref_h"
-            )
-
-        with col2:
-            ref_k = st.number_input(
-                "k",
-                value=0.0,
-                step=0.1,
-                key="ref_k"
-            )
-
-        with col3:
-            ref_l = st.number_input(
-                "l",
-                value=0.0,
-                step=0.1,
-                key="ref_l"
-            )
-
-        with col4:
-            ref_s1 = st.number_input(
-                "s1 (deg)",
-                value=0.0,
-                step=0.1,
-                key="ref_s1"
-            )
-
-        # ============================================================
         # Dark angle range
         # ============================================================
 
-        st.markdown("**Range**")
+        st.markdown("**Position & Range**")
 
         col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
 
