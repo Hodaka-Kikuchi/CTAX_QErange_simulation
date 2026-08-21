@@ -622,31 +622,37 @@ if mode == "Single crystal":
         # Sample environment selection
         # ============================================================
 
-        # 表示名 → ファイル名 の対応表
-        se_display_to_file = {
-            "None": None
-        }
+        se1, se2 = st.columns(2)
 
-        for se_name in se_files:
+        with se1:
+            # 表示名 → ファイル名 の対応表
+            se_display_to_file = {
+                "None": None
+            }
 
-            display_name = se_data[se_name].get(
-                "name",
-                se_name
+            for se_name in se_files:
+
+                display_name = se_data[se_name].get(
+                    "name",
+                    se_name
+                )
+
+                se_display_to_file[display_name] = se_name
+
+
+            se_options = list(se_display_to_file.keys())
+
+            selected_se_display = st.selectbox(
+                "Sample environment",
+                se_options,
+                key="selected_se"
             )
 
-            se_display_to_file[display_name] = se_name
+            # 実際に使用するファイル名
+            selected_se = se_display_to_file[selected_se_display]
 
-
-        se_options = list(se_display_to_file.keys())
-
-        selected_se_display = st.selectbox(
-            "Sample environment",
-            se_options,
-            key="selected_se"
-        )
-
-        # 実際に使用するファイル名
-        selected_se = se_display_to_file[selected_se_display]
+        with se2:
+            rotation = st.number_input("Rotation (deg)",value=0.0,step=1.0,key=f"rotation")
 
         # ============================================================
         # Dark angle range
@@ -749,16 +755,9 @@ if mode == "Single crystal":
                 (
                     angle_from,
                     angle_to,
-                    offset
+                    offset+rotation
                 )
             )
-
-        rotation = st.number_input(
-            "Rotation (deg)",
-            value=0.0,
-            step=1.0,
-            key=f"rotation"
-        )
 
         # --------------------------------------------------------
         # Add dark angle
@@ -1149,21 +1148,25 @@ if mode == "Single crystal":
             # Loop over additional s1 ranges
             # ========================================================
 
+
+            # --------------------------------------------------------
+            # Apply global rotation to all dark-angle offsets
+            # --------------------------------------------------------
+
             for angle_from, angle_to, offset in dark_angle_ranges:
 
                 # 0, 0 は未使用
                 if angle_from == 0 and angle_to == 0:
                     continue
-
+                
                 if instrument_sense == "+-+":
                     offset = -offset
                     angle_from = -angle_from
                     angle_to = -angle_to
-                    rotation = -rotation
-
+                
                 # Actual s1 positions
-                s1_from = offset + angle_from - Q_offset + rotation
-                s1_to   = offset + angle_to - Q_offset + rotation
+                s1_from = offset + angle_from - Q_offset
+                s1_to   = offset + angle_to - Q_offset
 
                 # ====================================================
                 # kf side
@@ -2058,8 +2061,8 @@ if mode == "Single crystal":
             # - angle = clockwise
             # --------------------------------------------------------
 
-            angle_start = offset + rotation + angle_from
-            angle_end = offset + rotation + angle_to
+            angle_start = offset  + angle_from
+            angle_end = offset + angle_to
 
             if angle_end < angle_start:
                 angle_end += 360.0
