@@ -276,43 +276,6 @@ if mode == "Single crystal":
                 step=1.0
             )
 
-        st.sidebar.header("Propagation vector")
-
-        col1, col2, col3, col4 = st.sidebar.columns(4)
-
-        with col1:
-            show_k = st.checkbox(
-                "show",
-                value=False
-            )
-            
-        with col2:
-            k_h = st.number_input(
-                "h",
-                value=0.00,
-                step=0.01,
-                format="%.3f",
-                key="k_h"
-            )
-
-        with col3:
-            k_k = st.number_input(
-                "k",
-                value=0.00,
-                step=0.01,
-                format="%.3f",
-                key="k_k"
-            )
-
-        with col4:
-            k_l = st.number_input(
-                "l",
-                value=0.00,
-                step=0.01,
-                format="%.3f",
-                key="k_l"
-            )
-
         st.header("Scattering plane")
 
         Ucol1, Ucol2, Ucol3, Ucol4 = st.columns(4)
@@ -373,49 +336,45 @@ if mode == "Single crystal":
                 key="V_l"
             )
 
-        #st.write(instrument)
-        #st.write(instrument_data)
-
-        # ============================================================
-        # Reference Q
-        # ============================================================
-
-        st.markdown("**Reference Q**")
-
-        col1, col2, col3, col4 = st.columns(4)
+        st.sidebar.header("Propagation vector")
+        
+        col1, col2, col3, col4 = st.sidebar.columns(4)
 
         with col1:
-            ref_h = st.number_input(
-                "h",
-                value=0.0,
-                step=0.1,
-                key="ref_h"
+            show_k = st.checkbox(
+                "show",
+                value=False
             )
-
+            
         with col2:
-            ref_k = st.number_input(
-                "k",
-                value=0.0,
-                step=0.1,
-                key="ref_k"
+            k_h = st.number_input(
+                "h",
+                value=0.00,
+                step=0.01,
+                format="%.3f",
+                key="k_h"
             )
 
         with col3:
-            ref_l = st.number_input(
-                "l",
-                value=0.0,
-                step=0.1,
-                key="ref_l"
+            k_k = st.number_input(
+                "k",
+                value=0.00,
+                step=0.01,
+                format="%.3f",
+                key="k_k"
             )
 
         with col4:
-            ref_s1 = st.number_input(
-                "s1 (deg)",
-                value=0.0,
-                step=0.1,
-                key="ref_s1"
+            k_l = st.number_input(
+                "l",
+                value=0.00,
+                step=0.01,
+                format="%.3f",
+                key="k_l"
             )
 
+        #st.write(instrument)
+        #st.write(instrument_data)
 
         st.header("Configuration")
 
@@ -434,7 +393,9 @@ if mode == "Single crystal":
             8.0
         )
 
-        default_sense = instrument_data.get("sense", "-+-")# ============================================================
+        default_sense = instrument_data.get("sense", "-+-")
+
+        # ============================================================
         # Energy / Sense
         # ============================================================
 
@@ -534,45 +495,123 @@ if mode == "Single crystal":
                 key=f"S1max_{instrument}"
             )
 
+        # ------------------------------------------------------------
+        # Sample selection
+        # ------------------------------------------------------------
 
         # ============================================================
-        # Energy
+        # Diffraction samples
+        # ============================================================
+    
+        sample_data = {}
+    
+        sample_files = sorted(
+            [
+                f.replace(".json", "")
+                for f in os.listdir(SAMPLE_DIR)
+                if f.endswith(".json")
+            ]
+        )
+    
+        # ------------------------------------------------------------
+        # Read JSON
+        # ------------------------------------------------------------
+    
+        for sample_name in sample_files:
+    
+            filepath = os.path.join(
+                SAMPLE_DIR,
+                f"{sample_name}.json"
+            )
+    
+            with open(
+                filepath,
+                "r",
+                encoding="utf-8"
+            ) as f:
+    
+                sample_data[sample_name] = json.load(f)
+    
+    
+        # ------------------------------------------------------------
+        # Display names
+        # ------------------------------------------------------------
+    
+        sample_display_names = {}
+
+        for sample_name, sample_info in sample_data.items():
+
+            sample_display_names[sample_name] = sample_info.get(
+                "name",
+                sample_name
+            )
+        
+        st.markdown("**Background scattering**")
+
+        sample_options = ["None"] + sorted(
+            sample_data.keys(),
+            key=lambda x: sample_display_names[x]
+        )
+
+        selected_sample = st.selectbox(
+            "Holder / cell material",
+            sample_options,
+            format_func=lambda x: (
+                "None"
+                if x == "None"
+                else sample_display_names[x]
+            ),
+            key="selected_sample"
+        )
+
+        # ============================================================
+        # Reference Q
         # ============================================================
 
-        if mode == "Ef fixed":
+        st.markdown("**Reference Q**")
 
-            if lambda_half:
-                Ef = 4 * energy_input
-            else:
-                Ef = energy_input
+        col1, col2, col3, col4 = st.columns(4)
 
-        else:
-
-            if lambda_half:
-                Ei = 4 * energy_input
-            else:
-                Ei = energy_input
-
-        st.markdown("### Diffraction rings")
-
-        col_Al, col_Cu = st.columns(2)
-
-        with col_Al:
-            add_Al = st.checkbox(
-                "Al",
-                key="add_Al"
+        with col1:
+            ref_h = st.number_input(
+                "h",
+                value=0.0,
+                step=0.1,
+                key="ref_h"
             )
 
-        with col_Cu:
-            add_Cu = st.checkbox(
-                "Cu",
-                key="add_Cu"
+        with col2:
+            ref_k = st.number_input(
+                "k",
+                value=0.0,
+                step=0.1,
+                key="ref_k"
             )
+
+        with col3:
+            ref_l = st.number_input(
+                "l",
+                value=0.0,
+                step=0.1,
+                key="ref_l"
+            )
+
+        with col4:
+            ref_s1 = st.number_input(
+                "s1 (deg)",
+                value=0.0,
+                step=0.1,
+                key="ref_s1"
+            )
+
+        # --------------------------------------------------------
+        # Dark angle
+        # --------------------------------------------------------
         
         st.header("Dark angle")
 
         # --------------------------------------------------------
-        # Sample Environment
+        # select sample environment
         # --------------------------------------------------------
 
         SE_DIR = os.path.join(
@@ -604,8 +643,7 @@ if mode == "Single crystal":
             ) as f:
 
                 se_data[se_name] = json.load(f)
-
-
+                
         # ============================================================
         # Sample environment selection
         # ============================================================
@@ -636,14 +674,17 @@ if mode == "Single crystal":
         # 実際に使用するファイル名
         selected_se = se_display_to_file[selected_se_display]
 
+        se_ranges = []
+        
         se1, se2 = st.columns(2)
 
         with se1:
+
             # ============================================================
             # Reference
             # ============================================================
 
-            if selected_se == "None":
+            if selected_se is None:
 
                 default_reference = "Reference Q"
 
@@ -654,13 +695,11 @@ if mode == "Single crystal":
                     "Reference Q"
                 )
 
-
             # SEを変更したときだけJSONの設定を反映
             if st.session_state.get("last_selected_se") != selected_se:
 
                 st.session_state["dark_angle_reference"] = default_reference
                 st.session_state["last_selected_se"] = selected_se
-
 
             dark_angle_reference = st.radio(
                 "Reference",
@@ -670,7 +709,31 @@ if mode == "Single crystal":
             )
 
         with se2:
-            rotation = st.number_input("Rotation (deg)",value=0.0,step=1.0,key=f"rotation")
+
+            rotation = st.number_input(
+                "Rotation (deg)",
+                value=0.0,
+                step=1.0,
+                key="rotation"
+            )
+
+        # ============================================================
+        # Energy
+        # ============================================================
+
+        if mode == "Ef fixed":
+
+            if lambda_half:
+                Ef = 4 * energy_input
+            else:
+                Ef = energy_input
+
+        else:
+
+            if lambda_half:
+                Ei = 4 * energy_input
+            else:
+                Ei = energy_input
 
         # ============================================================
         # Dark angle range
@@ -692,15 +755,19 @@ if mode == "Single crystal":
         with col3:
             st.markdown("Offset (deg)")
 
+        # ============================================================
+        # Dark angle ranges
+        # ============================================================
+
         dark_angle_ranges = []
 
-        if selected_se != "None":
-            se_ranges = se_data[selected_se]["dark_angle_ranges"]
-
+        if selected_se is not None:
+            se_ranges = se_data[selected_se].get(
+                "dark_angle_ranges",
+                []
+            )
         else:
             se_ranges = []
-
-        dark_angle_ranges = []
 
         for i in range(4):
             col0, col1, col2, col3 = st.columns([0.5, 1, 1, 1])
@@ -1118,7 +1185,7 @@ if mode == "Single crystal":
             )
         )
 
-    if add_dark_angle:
+    if add_dark_angle and not (ref_h == 0 and ref_k == 0 and ref_l == 0):
 
         # ============================================================
         # Dark angle
@@ -1126,7 +1193,6 @@ if mode == "Single crystal":
 
         dark_regions_kf = []
         dark_regions_ki = []
-
 
         # --------------------------------------------------------
         # Calculate Dark angle for each hw
@@ -1527,22 +1593,6 @@ if mode == "Single crystal":
                         f"({hkl_mag[0]:.2f},{hkl_mag[1]:.2f},{hkl_mag[2]:.2f})"
                     )
 
-    # powder diffraction
-    sample_data = {}
-
-    for sample_name in ["Al", "Cu"]:
-
-        if sample_name not in sample_files:
-            continue
-
-        filepath = os.path.join(
-            SAMPLE_DIR,
-            f"{sample_name}.json"
-        )
-
-        with open(filepath, "r", encoding="utf-8") as f:
-            sample_data[sample_name] = json.load(f)
-
     Qmax = np.max(Qmax_list)
 
     def make_diffraction_rings(sample_name,Qmax):
@@ -1676,13 +1726,9 @@ if mode == "Single crystal":
 
     selected_samples = []
 
-    if add_Al:
-        selected_samples.append("Al")
+    if selected_sample != "None":
+        selected_samples = [selected_sample]
 
-    if add_Cu:
-        selected_samples.append("Cu")
-
-    # 全hwで到達可能な最大Q
     Qmax_diffraction = max(Qmax_list)
 
     diffraction_ring_data = []
@@ -1703,7 +1749,6 @@ if mode == "Single crystal":
 
             Q = 2.0 * np.pi / peak["d"]
 
-            # Qmaxより外側のリングは作らない
             if Q > Qmax_diffraction:
                 continue
 
@@ -1730,11 +1775,11 @@ if mode == "Single crystal":
                 }
             )
 
-    diffraction_trace_indices = []
-
     # ============================================================
     # Powder diffraction rings
     # ============================================================
+
+    diffraction_trace_indices = []
 
     for ring in diffraction_ring_data:
 
@@ -1770,7 +1815,7 @@ if mode == "Single crystal":
 
         diffraction_trace_indices.append(trace_index)
 
-    if add_dark_angle:
+    if add_dark_angle and not (ref_h == 0 and ref_k == 0 and ref_l == 0):
 
         # ============================================================
         # Dark angle trace
@@ -1837,7 +1882,7 @@ if mode == "Single crystal":
         # Dark angle
         # ============================================================
 
-        if add_dark_angle:
+        if add_dark_angle and not (ref_h == 0 and ref_k == 0 and ref_l == 0):
 
             for dark_x, dark_y in dark_regions_kf[i]:
 
@@ -2223,7 +2268,7 @@ else:
                 step=1.0
             )
 
-        st.sidebar.header("Propagation vector")
+        st.markdown("**Propagation vector**")
         
         col1, col2, col3, col4 = st.sidebar.columns(4)
 
