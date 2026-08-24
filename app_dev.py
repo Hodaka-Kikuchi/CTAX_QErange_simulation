@@ -5,6 +5,7 @@ from scipy.interpolate import interp1d
 import plotly.graph_objects as go
 import json
 import os
+import math
 
 # デバックの手順(powershell上で動かす。)
 # cd C:\Users\h34\Documents\Python\CTAX
@@ -851,39 +852,91 @@ if mode == "Single crystal":
         add_dark_angle = st.button("Add dark angle")
 
     # basic calculation
+
+    lc_param = {
+        "a": a,
+        "b": b,
+        "c": c,
+        "alpha": alpha,
+        "beta": beta,
+        "gamma": gamma,
+        "sv1": np.array([U_h, U_k, U_l]),
+        "sv2": np.array([V_h, V_k, V_l]),
+    }
+
+    from RL_calc import RL_calc
+    from UB_calc import UB_calc
     
     #=========================
     # Crystal
     #=========================
+    lc_param = {
+        "a": a,
+        "b": b,
+        "c": c,
+        "alpha": alpha,
+        "beta": beta,
+        "gamma": gamma,
+        "sv1": np.array([U_h, U_k, U_l]),
+        "sv2": np.array([V_h, V_k, V_l]),
+    }
 
-    astar,bstar,cstar = reciprocal_vectors(
-        a,b,c,
-        alpha,beta,gamma
-    )
+    rl = RL_calc(lc_param)
+    UB = UB_calc(lc_param,rl)
+
+    # ============================================================
+    # Construct crystallographic U / V
+    # ============================================================
 
     u = (
-        U_h*astar +
-        U_k*bstar +
-        U_l*cstar
+        U_h * rl["astar"] +
+        U_k * rl["bstar"] +
+        U_l * rl["cstar"]
     )
 
     v = (
-        V_h*astar +
-        V_k*bstar +
-        V_l*cstar
+        V_h * rl["astar"] +
+        V_k * rl["bstar"] +
+        V_l * rl["cstar"]
     )
 
-    ex = u/np.linalg.norm(u)
+    # ============================================================
+    # Determine W = U × V
+    # ============================================================
 
-    ey = v - np.dot(v,ex)*ex
-    ey = ey/np.linalg.norm(ey)
+    w = np.cross(u, v)
+
+    # Wの最大成分（絶対値）がどの軸か
+    max_index = np.argmax(np.abs(w))
+
+    # 最大成分が負なら V を反転
+    if w[max_index] < 0:
+        v = -v
+        w = np.cross(u, v)
+
+        print("W dominant component was negative -> V flipped")
+    else:
+        print("W dominant component was positive -> V unchanged")
+
+
+    # ============================================================
+    # Construct user coordinate system
+    # ============================================================
+
+    ex = u / np.linalg.norm(u)
+
+    ey = v - np.dot(v, ex) * ex
+    ey = ey / np.linalg.norm(ey)
+
+    ez = np.cross(ex, ey)
+    ez = ez / np.linalg.norm(ez)
 
     # ----------------------------------------
     # Calculate offset
     # ----------------------------------------
 
     # Reciprocal lattice vector of reference Bragg position
-    Q_ref = (ref_h * astar + ref_k * bstar + ref_l * cstar)
+    Q_ref = (ref_h * rl["astar"] + ref_k * rl["bstar"] + ref_l * rl["cstar"])
     Q_ref_norm = np.linalg.norm(Q_ref)
     if Q_ref_norm > 1e-10:
         d_ref = 2.0 * np.pi / Q_ref_norm
@@ -1509,15 +1562,15 @@ if mode == "Single crystal":
     Qmax = Qmax_list[0]
 
     U = (
-        U_h*astar +
-        U_k*bstar +
-        U_l*cstar
+        U_h*rl["astar"] +
+        U_k*rl["bstar"] +
+        U_l*rl["cstar"]
     )
 
     V = (
-        V_h*astar +
-        V_k*bstar +
-        V_l*cstar
+        V_h*rl["astar"] +
+        V_k*rl["bstar"] +
+        V_l*rl["cstar"]
     )
 
     U_len = np.linalg.norm(U)
@@ -1545,9 +1598,9 @@ if mode == "Single crystal":
             hkl = m*np.array([U_h, U_k, U_l]) + n*np.array([V_h,V_k,V_l])
 
             G = (
-                hkl[0]*astar +
-                hkl[1]*bstar +
-                hkl[2]*cstar
+                hkl[0]*rl["astar"] +
+                hkl[1]*rl["bstar"] +
+                hkl[2]*rl["cstar"]
             )
 
             if np.linalg.norm(G) > Qplot:
@@ -1575,9 +1628,9 @@ if mode == "Single crystal":
                     )
 
                     Gmag = (
-                        hkl_mag[0]*astar
-                        + hkl_mag[1]*bstar
-                        + hkl_mag[2]*cstar
+                        hkl_mag[0]*rl["astar"]
+                        + hkl_mag[1]*rl["bstar"]
+                        + hkl_mag[2]*rl["cstar"]
                     )
 
                     if np.linalg.norm(Gmag) > Qplot:
