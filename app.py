@@ -914,9 +914,10 @@ if mode == "Single crystal":
         v = -v
         w = np.cross(u, v)
 
-        print("W dominant component was negative -> V flipped")
+        #print("W dominant component was negative -> V flipped")
     else:
-        print("W dominant component was positive -> V unchanged")
+        #print("W dominant component was positive -> V unchanged")
+        pass
 
 
     # ============================================================
@@ -2225,7 +2226,7 @@ if mode == "Single crystal":
         fig_geometry.update_layout(
 
             title=dict(
-                text="Dark angle (elastic, top view)",
+                text="Dark angle<br>(elastic & top view)",
                 x=0.5,
                 xanchor="center"
             ),
