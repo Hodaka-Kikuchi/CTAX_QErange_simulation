@@ -287,24 +287,27 @@ if mode == "Single crystal":
         with Ucol2:
             U_h = st.number_input(
                 "h",
-                value=1,
-                step=1,
+                value=1.000,
+                step=0.001,
+                format="%.3f",
                 key="U_h"
             )
 
         with Ucol3:
             U_k = st.number_input(
                 "k",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="U_k"
             )
 
         with Ucol4:
             U_l = st.number_input(
                 "l",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="U_l"
             )
 
@@ -316,24 +319,27 @@ if mode == "Single crystal":
         with Vcol2:
             V_h = st.number_input(
                 "h",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="V_h"
             )
 
         with Vcol3:
             V_k = st.number_input(
                 "k",
-                value=1,
-                step=1,
+                value=1.000,
+                step=0.001,
+                format="%.3f",
                 key="V_k"
             )
 
         with Vcol4:
             V_l = st.number_input(
                 "l",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="V_l"
             )
 
@@ -901,23 +907,62 @@ if mode == "Single crystal":
     )
 
     # ============================================================
-    # Determine W = U × V
+    # Normalize
+    # ============================================================
+
+    u_norm = u / np.linalg.norm(u)
+    v_norm = v / np.linalg.norm(v)
+
+    astar_norm = rl["astar"] / np.linalg.norm(rl["astar"])
+    bstar_norm = rl["bstar"] / np.linalg.norm(rl["bstar"])
+    cstar_norm = rl["cstar"] / np.linalg.norm(rl["cstar"])
+
+    # ============================================================
+    # Construct W = U × V
+    # ============================================================
+
+    w = np.cross(u_norm, v_norm)
+    w_norm = w / np.linalg.norm(w)
+
+
+    # ============================================================
+    # Construct W = U × V
     # ============================================================
 
     w = np.cross(u, v)
 
-    # Wの最大成分（絶対値）がどの軸か
-    max_index = np.argmax(np.abs(w))
+    tolerance = 1e-6
 
-    # 最大成分が負なら V を反転
-    if w[max_index] < 0:
-        v = -v
-        w = np.cross(u, v)
+    abs_w = np.abs(w)
+    max_abs = np.max(abs_w)
 
-        #print("W dominant component was negative -> V flipped")
+    # 最大値とみなせる成分をすべて取得
+    candidate_indices = np.where(
+        np.abs(abs_w - max_abs) <= tolerance
+    )[0]
+
+    # 同値の場合は「負の成分」を優先
+    negative_candidates = [
+        i for i in candidate_indices
+        if w[i] < 0
+    ]
+
+    if negative_candidates:
+        max_index = negative_candidates[0]
     else:
-        #print("W dominant component was positive -> V unchanged")
-        pass
+        max_index = candidate_indices[0]
+
+
+    # ============================================================
+    # Flip V if dominant W component is negative
+    # ============================================================
+
+    if w[max_index] < 0:
+
+        v = -v
+
+        # Recalculate W
+        w = np.cross(u, v)
 
 
     # ============================================================
