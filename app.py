@@ -891,7 +891,7 @@ if mode == "Single crystal":
     UB = UB_calc(lc_param,rl)
 
     # ============================================================
-    # Construct crystallographic U / V
+    # Construct U / V
     # ============================================================
 
     u = (
@@ -906,6 +906,7 @@ if mode == "Single crystal":
         V_l * rl["cstar"]
     )
 
+
     # ============================================================
     # Normalize
     # ============================================================
@@ -913,60 +914,164 @@ if mode == "Single crystal":
     u_norm = u / np.linalg.norm(u)
     v_norm = v / np.linalg.norm(v)
 
-    astar_norm = rl["astar"] / np.linalg.norm(rl["astar"])
-    bstar_norm = rl["bstar"] / np.linalg.norm(rl["bstar"])
-    cstar_norm = rl["cstar"] / np.linalg.norm(rl["cstar"])
-
-    # ============================================================
-    # Construct W = U × V
-    # ============================================================
-
-    w = np.cross(u_norm, v_norm)
-    w_norm = w / np.linalg.norm(w)
-
-
-    # ============================================================
-    # Construct W = U × V
-    # ============================================================
-
-    w = np.cross(u, v)
+    cstar_norm = (
+        rl["cstar"] / np.linalg.norm(rl["cstar"])
+    )
 
     tolerance = 1e-6
 
-    abs_w = np.abs(w)
-    max_abs = np.max(abs_w)
 
-    # 最大値とみなせる成分をすべて取得
-    candidate_indices = np.where(
-        np.abs(abs_w - max_abs) <= tolerance
-    )[0]
+    # ============================================================
+    # Check U / V against c*
+    # ============================================================
 
-    # 同値の場合は「負の成分」を優先
-    negative_candidates = [
-        i for i in candidate_indices
-        if w[i] < 0
-    ]
+    dot_u_c = np.dot(u_norm, cstar_norm)
+    dot_v_c = np.dot(v_norm, cstar_norm)
 
-    if negative_candidates:
-        max_index = negative_candidates[0]
+
+    # U/V が c* と平行かどうか
+    u_is_cstar = abs(abs(dot_u_c) - 1.0) <= tolerance
+    v_is_cstar = abs(abs(dot_v_c) - 1.0) <= tolerance
+
+
+    # ============================================================
+    # Special case:
+    # U or V is parallel to c*
+    # ============================================================
+
+    if u_is_cstar:
+
+        # --------------------------------------------------------
+        # U = +c*
+        # --------------------------------------------------------
+
+        if dot_u_c > 0:
+
+            print("U is +c* -> DO NOT flip V")
+
+            flip_v = False
+
+        # --------------------------------------------------------
+        # U = -c*
+        # --------------------------------------------------------
+
+        else:
+
+            print("U is -c* -> FLIP V")
+
+            flip_v = True
+
+
+    elif v_is_cstar:
+
+        # --------------------------------------------------------
+        # V = +c*
+        # --------------------------------------------------------
+
+        if dot_v_c > 0:
+
+            print("V is +c* -> FLIP V")
+
+            flip_v = True
+
+        # --------------------------------------------------------
+        # V = -c*
+        # --------------------------------------------------------
+
+        else:
+
+            print("V is -c* -> DO NOT flip V")
+
+            flip_v = False
+
+
+    # ============================================================
+    # Normal case:
+    # Neither U nor V is parallel to c*
+    # ============================================================
+
     else:
-        max_index = candidate_indices[0]
+
+        w = np.cross(u, v)
+
+        if np.linalg.norm(w) < 1e-12:
+            raise ValueError(
+                "U and V are parallel and cannot define "
+                "a scattering plane."
+            )
+
+
+        # ========================================================
+        # Find dominant W component
+        # ========================================================
+
+        abs_w = np.abs(w)
+        max_abs = np.max(abs_w)
+
+        candidate_indices = np.where(
+            np.abs(abs_w - max_abs) <= tolerance
+        )[0]
+
+
+        # ========================================================
+        # If tied, prioritize negative component
+        # ========================================================
+
+        negative_candidates = [
+            i for i in candidate_indices
+            if w[i] < 0
+        ]
+
+
+        if negative_candidates:
+
+            max_index = negative_candidates[0]
+
+        else:
+
+            max_index = candidate_indices[0]
+
+
+        # ========================================================
+        # Determine V flip from W
+        # ========================================================
+
+        if w[max_index] < 0:
+
+            print(
+                "Dominant W component is negative "
+                "-> FLIP V"
+            )
+
+            flip_v = True
+
+        else:
+
+            print(
+                "Dominant W component is positive "
+                "-> DO NOT flip V"
+            )
+
+            flip_v = False
 
 
     # ============================================================
-    # Flip V if dominant W component is negative
+    # Apply V flip
     # ============================================================
 
-    if w[max_index] < 0:
+    if flip_v:
 
         v = -v
 
-        # Recalculate W
-        w = np.cross(u, v)
+        print("V was flipped.")
+
+    else:
+
+        print("V was not flipped.")
 
 
     # ============================================================
-    # Construct user coordinate system
+    # Reconstruct final U / V / W coordinate system
     # ============================================================
 
     ex = u / np.linalg.norm(u)

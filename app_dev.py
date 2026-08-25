@@ -287,24 +287,27 @@ if mode == "Single crystal":
         with Ucol2:
             U_h = st.number_input(
                 "h",
-                value=1,
-                step=1,
+                value=1.000,
+                step=0.001,
+                format="%.3f",
                 key="U_h"
             )
 
         with Ucol3:
             U_k = st.number_input(
                 "k",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="U_k"
             )
 
         with Ucol4:
             U_l = st.number_input(
                 "l",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="U_l"
             )
 
@@ -316,24 +319,27 @@ if mode == "Single crystal":
         with Vcol2:
             V_h = st.number_input(
                 "h",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="V_h"
             )
 
         with Vcol3:
             V_k = st.number_input(
                 "k",
-                value=1,
-                step=1,
+                value=1.000,
+                step=0.001,
+                format="%.3f",
                 key="V_k"
             )
 
         with Vcol4:
             V_l = st.number_input(
                 "l",
-                value=0,
-                step=1,
+                value=0.000,
+                step=0.001,
+                format="%.3f",
                 key="V_l"
             )
 
@@ -885,7 +891,7 @@ if mode == "Single crystal":
     UB = UB_calc(lc_param,rl)
 
     # ============================================================
-    # Construct crystallographic U / V
+    # Construct U / V
     # ============================================================
 
     u = (
@@ -900,27 +906,172 @@ if mode == "Single crystal":
         V_l * rl["cstar"]
     )
 
+
     # ============================================================
-    # Determine W = U × V
+    # Normalize
     # ============================================================
 
-    w = np.cross(u, v)
+    u_norm = u / np.linalg.norm(u)
+    v_norm = v / np.linalg.norm(v)
 
-    # Wの最大成分（絶対値）がどの軸か
-    max_index = np.argmax(np.abs(w))
+    cstar_norm = (
+        rl["cstar"] / np.linalg.norm(rl["cstar"])
+    )
 
-    # 最大成分が負なら V を反転
-    if w[max_index] < 0:
-        v = -v
+    tolerance = 1e-6
+
+
+    # ============================================================
+    # Check U / V against c*
+    # ============================================================
+
+    dot_u_c = np.dot(u_norm, cstar_norm)
+    dot_v_c = np.dot(v_norm, cstar_norm)
+
+
+    # U/V が c* と平行かどうか
+    u_is_cstar = abs(abs(dot_u_c) - 1.0) <= tolerance
+    v_is_cstar = abs(abs(dot_v_c) - 1.0) <= tolerance
+
+
+    # ============================================================
+    # Special case:
+    # U or V is parallel to c*
+    # ============================================================
+
+    if u_is_cstar:
+
+        # --------------------------------------------------------
+        # U = +c*
+        # --------------------------------------------------------
+
+        if dot_u_c > 0:
+
+            print("U is +c* -> DO NOT flip V")
+
+            flip_v = False
+
+        # --------------------------------------------------------
+        # U = -c*
+        # --------------------------------------------------------
+
+        else:
+
+            print("U is -c* -> FLIP V")
+
+            flip_v = True
+
+
+    elif v_is_cstar:
+
+        # --------------------------------------------------------
+        # V = +c*
+        # --------------------------------------------------------
+
+        if dot_v_c > 0:
+
+            print("V is +c* -> FLIP V")
+
+            flip_v = True
+
+        # --------------------------------------------------------
+        # V = -c*
+        # --------------------------------------------------------
+
+        else:
+
+            print("V is -c* -> DO NOT flip V")
+
+            flip_v = False
+
+
+    # ============================================================
+    # Normal case:
+    # Neither U nor V is parallel to c*
+    # ============================================================
+
+    else:
+
         w = np.cross(u, v)
 
-        print("W dominant component was negative -> V flipped")
-    else:
-        print("W dominant component was positive -> V unchanged")
+        if np.linalg.norm(w) < 1e-12:
+            raise ValueError(
+                "U and V are parallel and cannot define "
+                "a scattering plane."
+            )
+
+
+        # ========================================================
+        # Find dominant W component
+        # ========================================================
+
+        abs_w = np.abs(w)
+        max_abs = np.max(abs_w)
+
+        candidate_indices = np.where(
+            np.abs(abs_w - max_abs) <= tolerance
+        )[0]
+
+
+        # ========================================================
+        # If tied, prioritize negative component
+        # ========================================================
+
+        negative_candidates = [
+            i for i in candidate_indices
+            if w[i] < 0
+        ]
+
+
+        if negative_candidates:
+
+            max_index = negative_candidates[0]
+
+        else:
+
+            max_index = candidate_indices[0]
+
+
+        # ========================================================
+        # Determine V flip from W
+        # ========================================================
+
+        if w[max_index] < 0:
+
+            print(
+                "Dominant W component is negative "
+                "-> FLIP V"
+            )
+
+            flip_v = True
+
+        else:
+
+            print(
+                "Dominant W component is positive "
+                "-> DO NOT flip V"
+            )
+
+            flip_v = False
 
 
     # ============================================================
-    # Construct user coordinate system
+    # Apply V flip
+    # ============================================================
+
+    if flip_v:
+
+        v = -v
+
+        print("V was flipped.")
+
+    else:
+
+        print("V was not flipped.")
+
+
+    # ============================================================
+    # Reconstruct final U / V / W coordinate system
     # ============================================================
 
     ex = u / np.linalg.norm(u)
@@ -2225,7 +2376,7 @@ if mode == "Single crystal":
         fig_geometry.update_layout(
 
             title=dict(
-                text="Dark angle (elastic, top view)",
+                text="Dark angle<br>(elastic & top view)",
                 x=0.5,
                 xanchor="center"
             ),
