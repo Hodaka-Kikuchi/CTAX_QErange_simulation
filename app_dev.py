@@ -287,27 +287,27 @@ if mode == "Single crystal":
         with Ucol2:
             U_h = st.number_input(
                 "h",
-                value=1.000,
-                step=0.001,
-                format="%.3f",
+                value=1,
+                step=1,
+                format="%d",
                 key="U_h"
             )
 
         with Ucol3:
             U_k = st.number_input(
                 "k",
-                value=0.000,
-                step=0.001,
-                format="%.3f",
+                value=0,
+                step=1,
+                format="%d",
                 key="U_k"
             )
 
         with Ucol4:
             U_l = st.number_input(
                 "l",
-                value=0.000,
-                step=0.001,
-                format="%.3f",
+                value=0,
+                step=1,
+                format="%d",
                 key="U_l"
             )
 
@@ -319,27 +319,27 @@ if mode == "Single crystal":
         with Vcol2:
             V_h = st.number_input(
                 "h",
-                value=0.000,
-                step=0.001,
-                format="%.3f",
+                value=0,
+                step=1,
+                format="%d",
                 key="V_h"
             )
 
         with Vcol3:
             V_k = st.number_input(
                 "k",
-                value=1.000,
-                step=0.001,
-                format="%.3f",
+                value=1,
+                step=1,
+                format="%d",
                 key="V_k"
             )
 
         with Vcol4:
             V_l = st.number_input(
                 "l",
-                value=0.000,
-                step=0.001,
-                format="%.3f",
+                value=0,
+                step=1,
+                format="%d",
                 key="V_l"
             )
 
@@ -906,172 +906,293 @@ if mode == "Single crystal":
         V_l * rl["cstar"]
     )
 
+    print("U =", u)
+    print("V =", v)
+    print("W =", np.cross(u, v))
+
 
     # ============================================================
-    # Normalize
+    # Normalize U / V / reciprocal lattice axes
     # ============================================================
+
+    tolerance = 1e-6
 
     u_norm = u / np.linalg.norm(u)
     v_norm = v / np.linalg.norm(v)
 
-    cstar_norm = (
-        rl["cstar"] / np.linalg.norm(rl["cstar"])
-    )
+    astar_norm = rl["astar"] / np.linalg.norm(rl["astar"])
+    bstar_norm = rl["bstar"] / np.linalg.norm(rl["bstar"])
+    cstar_norm = rl["cstar"] / np.linalg.norm(rl["cstar"])
 
-    tolerance = 1e-6
+    def rotation_matrix_from_vectors(a, b):
 
+        a = a / np.linalg.norm(a)
+        b = b / np.linalg.norm(b)
+
+        v = np.cross(a, b)
+        c = np.dot(a, b)
+
+        # ほぼ同じ方向
+        if c > 1.0 - 1e-12:
+            return np.eye(3)
+
+        # ほぼ逆方向
+        if c < -1.0 + 1e-12:
+
+            # a と直交する軸を選ぶ
+            axis = np.array([1.0, 0.0, 0.0])
+
+            if abs(a[0]) > 0.9:
+                axis = np.array([0.0, 1.0, 0.0])
+
+            axis = axis - np.dot(axis, a) * a
+            axis = axis / np.linalg.norm(axis)
+
+            K = np.array([
+                [0.0, -axis[2], axis[1]],
+                [axis[2], 0.0, -axis[0]],
+                [-axis[1], axis[0], 0.0]
+            ])
+
+            return -np.eye(3) + 2.0 * np.outer(axis, axis)
+
+        # Rodrigues
+        K = np.array([
+            [0.0, -v[2], v[1]],
+            [v[2], 0.0, -v[0]],
+            [-v[1], v[0], 0.0]
+        ])
+
+        return (
+            np.eye(3)
+            + K
+            + K @ K * ((1.0 - c) / np.dot(v, v))
+        )
 
     # ============================================================
-    # Check U / V against c*
+    # Check whether U or V corresponds to ±c*
     # ============================================================
 
     dot_u_c = np.dot(u_norm, cstar_norm)
     dot_v_c = np.dot(v_norm, cstar_norm)
 
+    u_is_plus_c  = abs(dot_u_c - 1.0) < tolerance
+    u_is_minus_c = abs(dot_u_c + 1.0) < tolerance
 
-    # U/V が c* と平行かどうか
-    u_is_cstar = abs(abs(dot_u_c) - 1.0) <= tolerance
-    v_is_cstar = abs(abs(dot_v_c) - 1.0) <= tolerance
-
-
-    # ============================================================
-    # Special case:
-    # U or V is parallel to c*
-    # ============================================================
-
-    if u_is_cstar:
-
-        # --------------------------------------------------------
-        # U = +c*
-        # --------------------------------------------------------
-
-        if dot_u_c > 0:
-
-            print("U is +c* -> DO NOT flip V")
-
-            flip_v = False
-
-        # --------------------------------------------------------
-        # U = -c*
-        # --------------------------------------------------------
-
-        else:
-
-            print("U is -c* -> FLIP V")
-
-            flip_v = True
-
-
-    elif v_is_cstar:
-
-        # --------------------------------------------------------
-        # V = +c*
-        # --------------------------------------------------------
-
-        if dot_v_c > 0:
-
-            print("V is +c* -> FLIP V")
-
-            flip_v = True
-
-        # --------------------------------------------------------
-        # V = -c*
-        # --------------------------------------------------------
-
-        else:
-
-            print("V is -c* -> DO NOT flip V")
-
-            flip_v = False
+    v_is_plus_c  = abs(dot_v_c - 1.0) < tolerance
+    v_is_minus_c = abs(dot_v_c + 1.0) < tolerance
 
 
     # ============================================================
-    # Normal case:
-    # Neither U nor V is parallel to c*
+    # Special cases involving c*
+    #
+    # U = +c*  -> DO NOT flip
+    # U = -c*  -> FLIP
+    # V = +c*  -> FLIP
+    # V = -c*  -> DO NOT flip
     # ============================================================
 
-    else:
-
-        w = np.cross(u, v)
-
-        if np.linalg.norm(w) < 1e-12:
-            raise ValueError(
-                "U and V are parallel and cannot define "
-                "a scattering plane."
-            )
+    special_case = False
 
 
-        # ========================================================
-        # Find dominant W component
-        # ========================================================
+    # ------------------------------------------------------------
+    # Case 1
+    # U = +c*
+    # ------------------------------------------------------------
 
-        abs_w = np.abs(w)
-        max_abs = np.max(abs_w)
+    if u_is_plus_c:
 
-        candidate_indices = np.where(
-            np.abs(abs_w - max_abs) <= tolerance
-        )[0]
+        special_case = True
 
-
-        # ========================================================
-        # If tied, prioritize negative component
-        # ========================================================
-
-        negative_candidates = [
-            i for i in candidate_indices
-            if w[i] < 0
-        ]
+        print("Special case: U = +c* -> DO NOT flip V")
 
 
-        if negative_candidates:
+    # ------------------------------------------------------------
+    # Case 2
+    # U = -c*
+    # ------------------------------------------------------------
 
-            max_index = negative_candidates[0]
+    elif u_is_minus_c:
 
-        else:
+        special_case = True
 
-            max_index = candidate_indices[0]
-
-
-        # ========================================================
-        # Determine V flip from W
-        # ========================================================
-
-        if w[max_index] < 0:
-
-            print(
-                "Dominant W component is negative "
-                "-> FLIP V"
-            )
-
-            flip_v = True
-
-        else:
-
-            print(
-                "Dominant W component is positive "
-                "-> DO NOT flip V"
-            )
-
-            flip_v = False
-
-
-    # ============================================================
-    # Apply V flip
-    # ============================================================
-
-    if flip_v:
+        print("Special case: U = -c* -> FLIP V")
 
         v = -v
 
-        print("V was flipped.")
 
-    else:
+    # ------------------------------------------------------------
+    # Case 3
+    # V = +c*
+    # ------------------------------------------------------------
 
-        print("V was not flipped.")
+    elif v_is_plus_c:
 
+        special_case = True
+
+        print("Special case: V = +c* -> FLIP V")
+
+        v = -v
+
+
+    # ------------------------------------------------------------
+    # Case 4
+    # V = -c*
+    # ------------------------------------------------------------
+
+    elif v_is_minus_c:
+
+        special_case = True
+
+        print("Special case: V = -c* -> DO NOT flip V")
 
     # ============================================================
-    # Reconstruct final U / V / W coordinate system
+    # General case
+    #
+    # U/V are not ±c*
+    #
+    # Determine the direction of W relative to the absolute Z axis
+    # ============================================================
+
+    if not special_case:
+
+        print("General case: U/V are not ±c*")
+
+        # --------------------------------------------------------
+        # Construct W = U × V
+        # --------------------------------------------------------
+
+        w = np.cross(u, v)
+
+        if np.linalg.norm(w) <= tolerance:
+            raise ValueError(
+                "U and V are parallel and cannot define a scattering plane."
+            )
+
+        w_norm = w / np.linalg.norm(w)
+
+        print("W =", w_norm)
+
+        # --------------------------------------------------------
+        # 1. First check the original W Z component
+        # --------------------------------------------------------
+
+        w_z = w_norm[2]
+
+        print("W · Z =", w_z)
+
+        if w_z < -tolerance:
+
+            print("W points toward -Z -> FLIP V")
+
+            v = -v
+
+            # Recalculate W
+            w = np.cross(u, v)
+            w_norm = w / np.linalg.norm(w)
+
+        elif w_z > tolerance:
+
+            print("W points toward +Z -> DO NOT flip V")
+
+        # --------------------------------------------------------
+        # 2. W is approximately in XY plane
+        # --------------------------------------------------------
+
+        else:
+
+            print(
+                "W is approximately in XY plane "
+                "-> use U->X / V->Y rotation check"
+            )
+
+            # ----------------------------------------------------
+            # U -> +X
+            # ----------------------------------------------------
+
+            x_axis = np.array([1.0, 0.0, 0.0])
+
+            # ----------------------------------------------------
+            # V -> +Y
+            # ----------------------------------------------------
+
+            y_axis = np.array([0.0, 1.0, 0.0])
+
+            # ここで R_U と R_V を作る
+            R_U = rotation_matrix_from_vectors(
+                u_norm,
+                x_axis
+            )
+
+            R_V = rotation_matrix_from_vectors(
+                v_norm,
+                y_axis
+            )
+
+            # ----------------------------------------------------
+            # Rotate W
+            # ----------------------------------------------------
+
+            w_u = R_U @ w_norm
+            w_v = R_V @ w_norm
+
+            z_u = w_u[2]
+            z_v = w_v[2]
+
+            print("R_U(W) =", w_u)
+            print("R_V(W) =", w_v)
+            print("R_U(W).z =", z_u)
+            print("R_V(W).z =", z_v)
+
+            # ----------------------------------------------------
+            # Compare Z-direction signs
+            # ----------------------------------------------------
+
+            if (
+                abs(z_u) > tolerance
+                and
+                abs(z_v) > tolerance
+            ):
+
+                # Opposite signs -> FLIP
+                if z_u * z_v < 0:
+
+                    print(
+                        "Rotated W Z directions are opposite "
+                        "-> FLIP V"
+                    )
+
+                    v = -v
+
+                else:
+
+                    print(
+                        "Rotated W Z directions agree "
+                        "-> DO NOT flip V"
+                    )
+
+            else:
+
+                print(
+                    "One or both rotated W Z components are "
+                    "approximately zero -> DO NOT flip V"
+                )
+
+            # ----------------------------------------------------
+            # Recalculate W after possible flip
+            # ----------------------------------------------------
+
+            w = np.cross(u, v)
+
+            if np.linalg.norm(w) <= tolerance:
+                raise ValueError(
+                    "U and V are parallel after V-direction correction."
+                )
+
+            w_norm = w / np.linalg.norm(w)
+
+    # ============================================================
+    # Final user coordinate system
     # ============================================================
 
     ex = u / np.linalg.norm(u)
@@ -1081,6 +1202,10 @@ if mode == "Single crystal":
 
     ez = np.cross(ex, ey)
     ez = ez / np.linalg.norm(ez)
+
+    print("ex =", ex)
+    print("ey =", ey)
+    print("ez =", ez)
 
     # ----------------------------------------
     # Calculate offset
@@ -1759,6 +1884,12 @@ if mode == "Single crystal":
 
             x = np.dot(G, ex)
             y = np.dot(G, ey)
+
+            def format_hkl_value(x):
+                if abs(x - round(x)) < 1e-10:
+                    return str(int(round(x)))
+                else:
+                    return f"{x:.3f}"
 
             Gx_points.append(x)
             Gy_points.append(y)
