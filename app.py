@@ -983,13 +983,18 @@ if mode == "Single crystal":
     v_is_minus_c = abs(dot_v_c + 1.0) < tolerance
 
 
-    # ============================================================
+   # ============================================================
     # Special cases involving c*
     #
-    # U = +c*  -> DO NOT flip
-    # U = -c*  -> FLIP
-    # V = +c*  -> FLIP
-    # V = -c*  -> DO NOT flip
+    # First step:
+    #   U = +c*  -> DO NOT flip
+    #   U = -c*  -> FLIP
+    #   V = +c*  -> FLIP
+    #   V = -c*  -> DO NOT flip
+    #
+    # Second step:
+    #   After the first correction, calculate W = U × V.
+    #   If W points in the wrong direction, flip V once more.
     # ============================================================
 
     special_case = False
@@ -1045,6 +1050,55 @@ if mode == "Single crystal":
         special_case = True
 
         print("Special case: V = -c* -> DO NOT flip V")
+
+
+    # ============================================================
+    # Second-stage W check
+    #
+    # Even after the special-case correction above,
+    # check the actual handedness using W = U × V.
+    # ============================================================
+
+    if special_case:
+
+        w = np.cross(u, v)
+
+        if np.linalg.norm(w) <= tolerance:
+
+            raise ValueError(
+                "U and V are parallel and cannot define "
+                "a scattering plane."
+            )
+
+        w_norm = w / np.linalg.norm(w)
+
+        print("Special-case W =", w_norm)
+
+        # --------------------------------------------------------
+        # W must point toward +X in the reference coordinate system
+        #
+        # If W points toward -X, flip V once more.
+        # --------------------------------------------------------
+
+        if w_norm[0] < -tolerance:
+
+            print(
+                "Special-case W points toward -X "
+                "-> FLIP V again"
+            )
+
+            v = -v
+
+            # Recalculate W
+            w = np.cross(u, v)
+            w_norm = w / np.linalg.norm(w)
+
+        else:
+
+            print(
+                "Special-case W points toward +X "
+                "-> DO NOT flip V"
+            )
 
     # ============================================================
     # General case
