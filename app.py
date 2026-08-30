@@ -1080,7 +1080,7 @@ if mode == "Single crystal":
         # If W points toward -X, flip V once more.
         # --------------------------------------------------------
 
-        if w_norm[0] < -tolerance:
+        if max(w_norm) < -tolerance:
 
             print(
                 "Special-case W points toward -X "
