@@ -970,8 +970,8 @@ if mode == "Single crystal":
             elif w[0] < -tol:
                 return -1
 
-            # まず w[1] を見る
-            if w[1] > tol:
+            # 最終的にw[1] を見る
+            elif w[1] > tol:
                 return 1
             elif w[1] < -tol:
                 return -1
